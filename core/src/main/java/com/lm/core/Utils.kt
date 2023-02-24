@@ -3,17 +3,16 @@ package com.lm.core
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.runtime.MutableState
-import androidx.compose.ui.geometry.Offset
-import kotlin.math.cos
-import kotlin.math.sin
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
 
-fun <T> Context.toast(any: T)
-= Toast.makeText(this, any.toString(), Toast.LENGTH_SHORT).show()
+fun <T> Context.toast(any: T) = Toast.makeText(this, any.toString(), Toast.LENGTH_SHORT).show()
 
 val <T> T.log get() = Log.d("My", toString())
 
-fun round(x: Float, y: Float, delta: MutableState<Float>) = Offset(
-    150 * cos(10 * x * 0.0174444444 + delta.value).toFloat(),
-    60 * sin(10 * y * 0.0174444444 + delta.value).toFloat()
-)
+@Composable
+fun animDp(start: Dp, end: Dp, isAuth: Boolean) = animateDpAsState(
+    if (!isAuth) start else end, tween(700)
+).value

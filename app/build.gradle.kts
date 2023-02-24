@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.compose.ui.util)
     implementation(libs.compose.material3)
     implementation(libs.compose.ripple)
+    implementation(libs.compose.icons)
+    implementation(libs.compose.extended)
     implementation(projects.yandexapi)
     implementation(libs.yandex.disk)
     implementation(projects.core)

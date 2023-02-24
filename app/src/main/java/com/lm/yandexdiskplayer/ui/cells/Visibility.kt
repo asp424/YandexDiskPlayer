@@ -13,13 +13,10 @@ fun Visibility(visible: Boolean, content: @Composable (AnimatedVisibilityScope.(
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
-
             initialOffsetY = { with(density) { -40.dp.roundToPx() } }
         ) + expandVertically(
-
             expandFrom = Alignment.Bottom
         ) + fadeIn(
-
             initialAlpha = 0.3f
         ),
         exit = slideOutVertically() + shrinkVertically() + fadeOut()

@@ -14,6 +14,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
             version("compose-compiler", "1.4.0-alpha02")
+            version("compose-icons", "1.3.1")
             version("retrofit", "2.9.0")
             version("kotlin", "1.7.21")
             version("compose", "1.4.0-alpha03")
@@ -50,6 +51,10 @@ dependencyResolutionManagement {
                 .versionRef("retrofit")
             library("converterGson-retrofit", "com.squareup.retrofit2", "converter-gson")
                 .versionRef("retrofit")
+            library("compose-icons", "material".composeX, "material-icons-core")
+                .versionRef("compose-icons")
+            library("compose-extended", "material".composeX, "material-icons-extended")
+                .versionRef("compose-icons")
         }
     }
 }
