@@ -1,34 +1,29 @@
 package com.lm.yandexdiskplayer.ui.cells
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.lm.yandexdiskplayer.MainActivity
+import com.lm.yandexdiskplayer.player.PlayerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     mainScreenState: MainScreenState,
+    playerUiStates: PlayerUiStates,
     modifier: Modifier = Modifier
-) = Visibility(mainScreenState.isAuth) {
-    LazyColumn(with(mainScreenState) { modifier.columnModifier }, rememberLazyListState()) {
-        with(mainScreenState) { folders { FolderItem(mainScreenState, it) } }
+) = with(mainScreenState) {
+    Visibility(isAuth) {
+        LazyColumn(modifier.columnModifier) { folders { Folder(mainScreenState, it) } }
     }
-}
-
-@Composable
-fun rememberLazyListState(
-    initialFirstVisibleItemIndex: Int = 0,
-    initialFirstVisibleItemScrollOffset: Int = 0
-): LazyListState {
-    return rememberSaveable(saver = LazyListState.Saver) {
-        LazyListState(
-            initialFirstVisibleItemIndex,
-            initialFirstVisibleItemScrollOffset
-        )
+    val mainActivity = LocalContext.current as MainActivity
+        BackHandler {
+            if (playerUiStates.isPlayingCardVisible) playerUiStates.hidePlayingCard()
+            else mainActivity.finish()
     }
 }
 

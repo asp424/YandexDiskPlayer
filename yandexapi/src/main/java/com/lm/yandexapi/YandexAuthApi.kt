@@ -17,14 +17,13 @@ fun Context.startAuth() = yandexDiskSdk.createLoginIntent(
     YandexAuthLoginOptions.Builder().build()
 )
 
-fun Context.resultHandler(onGetToken: () -> Unit, onFailure: (String) -> Unit)
+fun Context.resultHandler(onGetToken: () -> Unit, onFailure: () -> Unit)
         : (ActivityResult) -> Unit = { result ->
     runCatching { with(result) { yandexDiskSdk.extractToken(resultCode, data) } }
         .onSuccess {
-            toast(it?.value)
             preferences.saveValue(YandexAuthToken, it?.value)
             onGetToken()
-        }.onFailure { onFailure("null"); toast(it.message) }
+        }.onFailure { onFailure(); toast(it.message) }
 }
 
 

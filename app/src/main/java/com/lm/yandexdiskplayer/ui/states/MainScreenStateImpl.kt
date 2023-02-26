@@ -17,31 +17,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.gson.Gson
 import com.lm.core.animDp
 import com.lm.core.utils.getToken
 import com.lm.yandexapi.folders
 import com.lm.yandexapi.models.Folder
+import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.resultHandler
 import com.lm.yandexapi.startAuth
 import com.lm.yandexdiskplayer.player.Player
+import com.lm.yandexdiskplayer.player.PlayerUiStates
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 
 private class MainScreenStateImpl(
+    private val player: Player,
+    private val playerUiStates: PlayerUiStates,
     private val context: Context,
-    private val coroutineDispatcher: CoroutineDispatcher = IO,
-    private val player: Player = Player(),
-    private val gson: Gson = Gson()
+    private val coroutineDispatcher: CoroutineDispatcher = IO
 ) : MainScreenState {
 
     private var _isAuth by mutableStateOf(context.getToken.isNotEmpty())
@@ -56,14 +56,8 @@ private class MainScreenStateImpl(
 
     private val loadList
         get() = CoroutineScope(coroutineDispatcher).launch {
-            context.folders.map {
-                foldersList.add(it); if (!_isAuth) _isAuth = true
-            }
+            context.folders.map { foldersList.add(it); if (!_isAuth) _isAuth = true }
         }
-
-    private fun play(coroutineScope: CoroutineScope, path: String): () -> Unit = {
-        player.playUrl(coroutineScope, coroutineDispatcher, context, path)
-    }
 
     override val Modifier.authByClick: Modifier
         get() = composed {
@@ -73,7 +67,8 @@ private class MainScreenStateImpl(
             )
             clickable(
                 remember { MutableInteractionSource() }, null, onClick =
-                remember { { launcher.launch(context.startAuth()) } }
+                remember { { launcher.launch(context.startAuth()) } },
+                enabled = !_isAuth
             )
                 .offset(animDp(0.dp, 140.dp, isAuth), animDp(0.dp, (-330).dp, isAuth))
                 .size(animDp(160.dp, 70.dp, isAuth))
@@ -81,28 +76,47 @@ private class MainScreenStateImpl(
 
     override val Modifier.cardFolderModifier: Modifier
         get() = composed {
-            val coroutineScope = rememberCoroutineScope()
             padding(start = 10.dp, end = 10.dp).clickable(
                 remember { MutableInteractionSource() }, null,
                 onClick = remember { { _isExpand = !_isExpand } }
             )
         }
 
-    override fun Modifier.cardSongModifier(path: String): Modifier = composed {
-        val coroutineScope = rememberCoroutineScope()
+    override fun Modifier.cardSongModifier(song: Song): Modifier = composed {
         padding(start = 50.dp).clickable(
             remember { MutableInteractionSource() }, null,
-            onClick = remember { play(coroutineScope, path) }
+            onClick = remember {
+                {
+                    player.playPlaylist(song,
+                        (foldersList.find { it.path == song.folder } ?: Folder()).listSongs
+                    )
+
+                }
+            }
         )
     }
 
-    override val Modifier.columnModifier get() = fillMaxSize()
+    override val Modifier.columnModifier get() = fillMaxSize().padding(top = 55.dp)
 
     override val Modifier.textPathModifier get() = padding(10.dp, 10.dp, 10.dp, 0.dp)
 
     override val Modifier.textDateModifier: Modifier get() = padding(10.dp, 0.dp, 10.dp, 10.dp)
 
     override val Modifier.rawModifier: Modifier get() = fillMaxSize().padding(start = 10.dp)
+
+    override val Modifier.textSongsModifier: Modifier get() = padding(10.dp)
+
+    override val Modifier.boxLogoModifier: Modifier get() = fillMaxSize()
+    override val Modifier.playerBarPrevModifier: Modifier
+        get() = clickable(playerUiStates.enablePrev) { player.playPrevSong() }
+            .padding(start = 80.dp)
+            .size(60.dp)
+    override val Modifier.playerBarNextModifier: Modifier
+        get() = clickable(playerUiStates.enableNext) { player.playNextSong() }
+            .padding(end = 80.dp)
+            .size(60.dp)
+    override val Modifier.playerBarPauseModifier: Modifier
+        get() = clickable(playerUiStates.enablePlay) { player.playOrPause() }.size(80.dp)
 
     override var isAuth: Boolean
         get() = _isAuth
@@ -118,11 +132,19 @@ private class MainScreenStateImpl(
 
     override fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit) =
         items(foldersList, { it.key }, { it }) { item(it) }
+
+    override fun onSliderValueChange(): (Float) -> Unit = { player.timeProgress(it) }
+
+    override fun onSliderValueChangeFinished(): () -> Unit = { player.onSliderMove() }
 }
 
 @Composable
-fun rememberMainScreenState(context: Context = LocalContext.current): MainScreenState =
-    remember { MainScreenStateImpl(context) }
+fun rememberMainScreenState(
+    player: Player,
+    playerUiStates: PlayerUiStates,
+    context: Context = LocalContext.current
+): MainScreenState =
+    remember { MainScreenStateImpl(player, playerUiStates, context) }
 
 
 

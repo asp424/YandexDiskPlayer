@@ -9,6 +9,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { setUrl("https://jitpack.io") }
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
     }
 
     versionCatalogs {
@@ -51,8 +54,6 @@ dependencyResolutionManagement {
                 .versionRef("retrofit")
             library("converterGson-retrofit", "com.squareup.retrofit2", "converter-gson")
                 .versionRef("retrofit")
-            library("compose-icons", "material".composeX, "material-icons-core")
-                .versionRef("compose-icons")
             library("compose-extended", "material".composeX, "material-icons-extended")
                 .versionRef("compose-icons")
         }

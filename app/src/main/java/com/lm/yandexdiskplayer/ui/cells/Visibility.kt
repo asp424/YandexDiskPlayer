@@ -11,17 +11,11 @@ import androidx.compose.ui.unit.dp
 fun Visibility(visible: Boolean, content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
     val density = LocalDensity.current
     AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(
-            initialOffsetY = { with(density) { -40.dp.roundToPx() } }
-        ) + expandVertically(
-            expandFrom = Alignment.Bottom
-        ) + fadeIn(
-            initialAlpha = 0.3f
-        ),
+        visible,
+        enter = slideInVertically(initialOffsetY = { with(density) { -40.dp.roundToPx() } })
+                + expandVertically(expandFrom = Alignment.Bottom) + fadeIn(initialAlpha = 0.3f),
         exit = slideOutVertically() + shrinkVertically() + fadeOut()
     ) {
         content(this)
     }
-
 }

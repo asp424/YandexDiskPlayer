@@ -1,11 +1,10 @@
 package com.lm.yandexdiskplayer.ui.cells
 
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.Card
@@ -19,9 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.lm.yandexapi.models.Folder
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun FolderItem(
+fun Folder(
     mainScreenState: MainScreenState,
     folderInfo: Folder,
     modifier: Modifier = Modifier
@@ -33,13 +31,13 @@ fun FolderItem(
                     Card(cardFolderModifier, border = BorderStroke(1.dp, Color.Black)) {
                         Row(modifier.rawModifier, verticalAlignment = CenterVertically) {
                             Icon(Icons.Outlined.Folder, null)
-                            Column(columnModifier, Center) {
+                            Column(modifier.fillMaxSize(), Center) {
                                 Text(path, textPathModifier)
                                 Text(date, textDateModifier)
                             }
                         }
                     }
-                    Songs(mainScreenState, listSongs)
+                    Songs(mainScreenState, folderInfo)
                 }
             }
         }

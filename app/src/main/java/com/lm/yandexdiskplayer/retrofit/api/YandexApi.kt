@@ -12,7 +12,8 @@ import retrofit2.http.Query
 interface Api {
     @GET("/v1/disk/resources/download")
     @Headers("Content-Type: application/json")
-    fun getDownloadLink(@Query("path") path: String, @Header("Authorization") authToken: String): Call<Link>
+    fun getDownloadLink(@Query("path") path: String,
+                        @Header("Authorization") authToken: String): Call<Link>
 }
 
 val api: Api by lazy {

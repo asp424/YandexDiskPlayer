@@ -2,11 +2,11 @@ plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
+    //id("dev.shreyaspatil.compose-compiler-report-generator") version "1.0.0-beta03"
 }
 
 android {
     compileSdk = 33
-
     defaultConfig {
         applicationId = "com.lm.yandexdiskplayer"
         minSdk = 26
