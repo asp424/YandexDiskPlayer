@@ -7,7 +7,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.lm.core.getSeconds
-import com.lm.core.log
 import com.lm.core.tryCatch
 import com.lm.core.utils.getToken
 import com.lm.yandexapi.models.Song
@@ -21,8 +20,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 class PlayerImpl(
     private val context: Context,
@@ -57,9 +54,9 @@ class PlayerImpl(
     }
 
     override fun playPlaylist(song: Song, pathsList: List<Song>) {
-        playerUiStates.isPlayingCardVisible = true
+        playerUiStates.showPlayingCard()
+        playerUiStates.setSongInPlayingCard(song)
         playList = pathsList
-        playerUiStates.nowPlayingSong = song
         playSong()
     }
 
@@ -69,21 +66,17 @@ class PlayerImpl(
                 releasePlayer()
             }
         }?.apply {
-            playerUiStates.nowPlayingSong = this
+            playerUiStates.setSongInPlayingCard(this)
             playSong()
         }
     }
 
     override fun playPrevSong(): Song? = with(playList) {
-        nextSong(-1)?.apply {
-            playerUiStates.nowPlayingSong = this
-        }
+        nextSong(-1)?.apply { playerUiStates.setSongInPlayingCard(this) }
     }
 
     override fun playNextSong(): Song? = with(playList) {
-        nextSong(1)?.apply {
-            playerUiStates.nowPlayingSong = this
-        }
+        nextSong(1)?.apply { playerUiStates.setSongInPlayingCard(this) }
     }
 
     override fun releasePlayer() {
@@ -100,11 +93,11 @@ class PlayerImpl(
     }
 
     private fun List<Song>.nextSong(nextOrPrev: Int) = checkNextIndex(nextOrPrev)?.apply {
-            tryCatch({
-                if (playerUiStates.playerState == PlayerState.PLAYING) playSong()
-                else releasePlayer()
-            })
-        }
+        tryCatch({
+            if (playerUiStates.playerState == PlayerState.PLAYING) playSong()
+            else releasePlayer()
+        })
+    }
 
     private fun List<Song>.checkNextIndex(nextOrPrev: Int) = getOrNull(
         indexOf(playerUiStates.nowPlayingSong) + nextOrPrev

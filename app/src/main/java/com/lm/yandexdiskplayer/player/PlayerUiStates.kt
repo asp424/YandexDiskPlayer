@@ -24,4 +24,8 @@ interface PlayerUiStates {
     fun clearInfo()
 
     fun hidePlayingCard()
+
+    fun showPlayingCard()
+
+    fun setSongInPlayingCard(song: Song)
 }

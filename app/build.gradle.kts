@@ -9,7 +9,7 @@ android {
     compileSdk = 33
     defaultConfig {
         applicationId = "com.lm.yandexdiskplayer"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 33
         versionCode = 1
         versionName = "0.0.1"
@@ -40,6 +40,7 @@ android {
     }
 
     kotlinOptions {
+        freeCompilerArgs += "-Xcontext-receivers"
         jvmTarget = "1.8"
     }
 }
@@ -57,4 +58,5 @@ dependencies {
     implementation(libs.yandex.disk)
     implementation(projects.core)
     implementation(libs.converterGson.retrofit)
+    implementation(libs.media2.session)
 }

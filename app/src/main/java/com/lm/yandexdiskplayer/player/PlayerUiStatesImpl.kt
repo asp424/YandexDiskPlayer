@@ -112,6 +112,14 @@ class PlayerUiStatesImpl : PlayerUiStates {
     override fun hidePlayingCard() {
         _isPlayingCardVisible = false
     }
+
+    override fun showPlayingCard() {
+        _isPlayingCardVisible = true
+    }
+
+    override fun setSongInPlayingCard(song: Song) {
+        nowPlayingSong = song
+    }
 }
 
 @Composable

@@ -26,6 +26,12 @@ dependencyResolutionManagement {
             version("yandex-auth", "2.3.0")
             version("yandex-disk", "1.03")
             version("core", "1.9.0")
+            version("media2", "1.2.1")
+            version("media3", "1.0.0-beta02")
+            library("media3-session", "androidx.media3", "media3-session")
+                .versionRef("media3")
+            library("media3-exoplayer", "androidx.media3", "media3-exoplayer")
+                .versionRef("media3")
             library("compose-foundation", "foundation".composeX, "foundation")
                 .versionRef("compose")
             library("compose-ui", "ui".composeX, "ui").versionRef("compose")
@@ -56,6 +62,12 @@ dependencyResolutionManagement {
                 .versionRef("retrofit")
             library("compose-extended", "material".composeX, "material-icons-extended")
                 .versionRef("compose-icons")
+            library("media2-player", "androidx.media2", "media2-player")
+                .versionRef("media2")
+            library("media2-widget", "androidx.media2", "media2-widget")
+                .versionRef("media2")
+            library("media2-session", "androidx.media2", "media2-session")
+                .versionRef("media2")
         }
     }
 }
