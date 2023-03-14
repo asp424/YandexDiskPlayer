@@ -31,6 +31,8 @@ interface MainScreenState {
     fun onSliderValueChange(): (Float) -> Unit
 
     fun onSliderValueChangeFinished(): () -> Unit
+
+    fun loadFoldersList()
 }
 
 

@@ -2,12 +2,15 @@ package com.lm.yandexdiskplayer.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 
-class PlayerUiStatesImpl : PlayerUiStates {
+class ControllerUiStatesImpl : ControllerUiStates {
 
     private var _nowPlayingSong by mutableStateOf(Song())
 
@@ -29,10 +32,24 @@ class PlayerUiStatesImpl : PlayerUiStates {
 
     private var _durationSong by mutableStateOf("")
 
+    private var _columnVisible by mutableStateOf(false)
+
+    private var _foldersList: SnapshotStateList<Folder> = mutableStateListOf()
+
+    override var foldersList: List<Folder>
+        get() = _foldersList
+        set(value) { value.forEach { _foldersList.add(it); if(!_columnVisible)_columnVisible = true } }
+
     override var nowPlayingSong: Song
         get() = _nowPlayingSong
         set(value) {
             _nowPlayingSong = value
+        }
+
+    override var columnVisible: Boolean
+        get() = _columnVisible
+        set(value) {
+            _columnVisible = value
         }
 
     override var timeTextProgress: String
@@ -123,4 +140,4 @@ class PlayerUiStatesImpl : PlayerUiStates {
 }
 
 @Composable
-fun rememberPlayerUiStates(): PlayerUiStates = remember { PlayerUiStatesImpl() }
+fun rememberPlayerUiStates(): ControllerUiStates = remember { ControllerUiStatesImpl() }

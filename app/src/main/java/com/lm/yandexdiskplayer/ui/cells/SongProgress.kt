@@ -7,13 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.lm.yandexdiskplayer.player.Player
-import com.lm.yandexdiskplayer.player.PlayerUiStates
+import com.lm.yandexdiskplayer.player.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @Composable
 fun SongProgress(
-    mainScreenState: MainScreenState, playerUiStates: PlayerUiStates, modifier: Modifier = Modifier
+    mainScreenState: MainScreenState, playerUiStates: ControllerUiStates, modifier: Modifier = Modifier
 ) = Slider(
     value = playerUiStates.timeProgress,
     onValueChange = mainScreenState.onSliderValueChange(),

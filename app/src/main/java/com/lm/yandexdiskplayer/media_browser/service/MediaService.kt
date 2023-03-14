@@ -1,7 +1,10 @@
 package com.lm.yandexdiskplayer.media_browser.service
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.content.Intent
+import android.media.MediaMetadata
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
@@ -12,29 +15,44 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS
 import android.support.v4.media.session.MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
 import android.support.v4.media.session.PlaybackStateCompat
+import android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY_PAUSE
+import android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING
+import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.os.bundleOf
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.lm.core.log
+import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.R
-import kotlinx.coroutines.Dispatchers
+import com.lm.yandexdiskplayer.player
+import com.lm.yandexdiskplayer.player.Player
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.runBlocking
 
+@RequiresApi(Build.VERSION_CODES.O)
 class MediaService : MediaBrowserServiceCompat() {
 
+    private var currentMetaData = MediaMetadataCompat.Builder()
+
     private var mediaSession: MediaSessionCompat? = null
+
+    private val notificationManager by  lazy {
+        getSystemService<NotificationManagerCompat>()
+    }
 
     private val stateBuilder by lazy {
         PlaybackStateCompat.Builder()
             .setActions(
                 ACTION_PLAY
-                        or PlaybackStateCompat.ACTION_PAUSE
+                        or ACTION_PAUSE
                         or ACTION_PLAY_PAUSE
                         or PlaybackStateCompat.ACTION_STOP
                         or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
@@ -50,16 +68,15 @@ class MediaService : MediaBrowserServiceCompat() {
         super.onCreate()
         mediaSession = MediaSessionCompat(baseContext, MediaService::class.java.simpleName).apply {
             setFlags(FLAG_HANDLES_MEDIA_BUTTONS or FLAG_HANDLES_TRANSPORT_CONTROLS)
-            setPlaybackState(stateBuilder.build())
-            setCallback(SessionCallback())
-            setSessionToken(this.sessionToken)
+
+            setSessionToken(sessionToken)
             isActive = true
-            setMetadata(MediaMetadataCompat.Builder()
-                .putText("path", "ass")
-                .build()
-            )
         }
-        start()
+        startForegroundService(Intent(this@MediaService, MediaService::class.java))
+        mediaSession?.setCallback(SessionCallback(player,
+            { notificationBuilder(0).build() },
+            { notificationBuilder(1).build() },
+            this@MediaService))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -67,28 +84,52 @@ class MediaService : MediaBrowserServiceCompat() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private class SessionCallback() : MediaSessionCompat.Callback() {
+    private class SessionCallback(
+        private val player: Player,
+        private val pauseNotify: () -> Notification,
+        private val playNotify: () -> Notification,
+        private val service: MediaService
+    ) : MediaSessionCompat.Callback() {
+
+        private val metadataBuilder = MediaMetadataCompat.Builder()
+
+        private val controller = service.mediaSession?.controller
 
         override fun onPlay() {
-            "play".log
+            player.playSong{
+                service.mediaSession?.setMetadata(
+                    metadataBuilder
+                        .putText(MediaMetadata.METADATA_KEY_TITLE, player.currentSong?.name)
+                        .putText(MediaMetadata.METADATA_KEY_ARTIST, player.currentSong?.folder)
+                        .putLong(MediaMetadata.METADATA_KEY_DURATION, player.player?.duration!!.toLong())
+                        .build()
+                )
+                showNotify(pauseNotify)
+            }
         }
 
         override fun onPause() {
-            "pause".log
+            showNotify(playNotify)
+            player.pause()
         }
 
         override fun onSkipToPrevious() {
-            "prev".log
+            player.playPrevSong()
+            showNotify(pauseNotify)
         }
 
         override fun onSkipToNext() {
-            "next".log
+            player.playNextSong()
+            showNotify(pauseNotify)
         }
 
         override fun onSeekTo(pos: Long) {}
         override fun onStop() {}
         override fun onRewind() {}
         override fun onSkipToQueueItem(id: Long) {}
+
+        private fun showNotify(notify: () -> Notification)
+        = service.startForeground(1001, notify.invoke())
     }
 
     override fun onGetRoot(
@@ -106,18 +147,11 @@ class MediaService : MediaBrowserServiceCompat() {
         parentId: String,
         result: Result<MutableList<MediaBrowserCompat.MediaItem>>
     ) {
-        runBlocking(Dispatchers.IO) {
+        runBlocking(IO) {
             result.sendResult(
                 when (parentId) {
-                    MediaId.root -> mutableListOf(
-                        MediaBrowserCompat.MediaItem(
-                            MediaDescriptionCompat.Builder()
-                                .setMediaId(MediaId.songs)
-                                .setTitle("Songs")
-                                .build(),
-                            MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                        )
-                    )
+                    MediaId.songs ->
+                        player.currentPlaylist.map { it.asBrowserMediaItem }.toMutableList()
 
                     else -> mutableListOf()
                 }
@@ -125,18 +159,35 @@ class MediaService : MediaBrowserServiceCompat() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun start() {
-        val controller = mediaSession?.controller
-        val mediaMetadata = controller?.metadata?.bundle?.getString("ass")
-        val builder = NotificationCompat.Builder(
-            this, notificationChannelId
+    private val Song.asBrowserMediaItem
+        inline get() = MediaBrowserCompat.MediaItem(
+            MediaDescriptionCompat.Builder()
+                .setMediaId("$folder$path")
+                .setTitle(path)
+                .setSubtitle(folder)
+                .setIconUri(Uri.EMPTY)
+                .build(),
+            MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+        )
+
+    private fun notificationBuilder(action: Int) =
+        NotificationCompat.Builder(
+            this@MediaService, notificationChannelId
         ).apply {
-            setContentTitle(mediaMetadata)
-            setContentText(mediaMetadata)
-            setSubText(mediaMetadata)
+            stateBuilder
+                .setState(STATE_PLAYING, 0, 1f)
+                .setBufferedPosition(0)
+            mediaSession?.setPlaybackState(stateBuilder.build())
+            mediaSession?.setMetadata(
+                currentMetaData
+                    .putText(MediaMetadata.METADATA_KEY_TITLE, player.currentSong?.name)
+                    .putText(MediaMetadata.METADATA_KEY_ARTIST, player.currentSong?.folder)
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, player.player?.duration!!.toLong())
+                    .build()
+            )
+            setContentTitle(player.currentSong?.name)
+            setContentText(player.currentSong?.folder)
             setLargeIcon(getDrawable(R.drawable.disk_logo)?.toBitmap())
-            setContentIntent(controller?.sessionActivity)
             setCategory(Notification.CATEGORY_TRANSPORT)
             setAutoCancel(false)
             setOnlyAlertOnce(true)
@@ -164,14 +215,17 @@ class MediaService : MediaBrowserServiceCompat() {
                     )
                 )
             )
-            addAction(
-                NotificationCompat.Action(
-                    R.drawable.pause, getString(R.string.pause),
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        this@MediaService, PlaybackStateCompat.ACTION_PAUSE
-                    )
+            if(action == 0) addAction( NotificationCompat.Action(
+                R.drawable.pause, "Pause",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MediaService, ACTION_PAUSE
                 )
-            )
+            )) else addAction(NotificationCompat.Action(
+                R.drawable.play, "Play",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this@MediaService, ACTION_PLAY
+                )
+            ))
             addAction(
                 NotificationCompat.Action(
                     R.drawable.play_skip_forward, getString(R.string.next),
@@ -181,10 +235,6 @@ class MediaService : MediaBrowserServiceCompat() {
                 )
             )
         }
-
-        startForegroundService(Intent(this, MediaService::class.java))
-        startForeground(notificationId, builder.build())
-    }
 
     private object MediaId {
         const val root = "root"
@@ -203,7 +253,6 @@ class MediaService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         mediaSession?.release()
-        "destr".log
         super.onDestroy()
     }
 

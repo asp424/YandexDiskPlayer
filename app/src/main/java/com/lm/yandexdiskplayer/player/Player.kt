@@ -1,13 +1,13 @@
 package com.lm.yandexdiskplayer.player
 
+import android.media.MediaPlayer
 import androidx.compose.runtime.Stable
 import com.lm.yandexapi.models.Song
-import kotlin.time.Duration
 
 @Stable
 interface Player {
 
-    fun playSong()
+    fun playSong(onPrepare: () -> Unit)
 
     fun playPlaylist(song: Song, pathsList: List<Song>)
 
@@ -19,10 +19,15 @@ interface Player {
 
     fun releasePlayer()
 
-    fun playOrPause()
-
+    fun pause()
 
     fun timeProgress(newTime: Float)
 
     fun onSliderMove()
+
+    var player: MediaPlayer?
+
+    val currentSong: Song?
+
+    val currentPlaylist: List<Song>
 }

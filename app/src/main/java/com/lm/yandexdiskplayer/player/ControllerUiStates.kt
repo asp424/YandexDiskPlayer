@@ -1,10 +1,11 @@
 package com.lm.yandexdiskplayer.player
 
 import androidx.compose.runtime.Stable
+import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 
 @Stable
-interface PlayerUiStates {
+interface ControllerUiStates {
 
     var nowPlayingSong: Song
     var isPlayingCardVisible: Boolean
@@ -16,6 +17,8 @@ interface PlayerUiStates {
     var enablePrev: Boolean
     var enableSlider: Boolean
     var enablePlay: Boolean
+    var foldersList: List<Folder>
+    var columnVisible: Boolean
 
     fun muteStates()
 

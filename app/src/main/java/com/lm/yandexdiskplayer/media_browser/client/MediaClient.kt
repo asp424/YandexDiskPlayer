@@ -1,24 +1,24 @@
 package com.lm.yandexdiskplayer.media_browser.client
 
-import android.app.Activity
 import android.content.ComponentName
-import android.content.Context
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import com.lm.core.log
 import com.lm.yandexdiskplayer.MainActivity
 import com.lm.yandexdiskplayer.media_browser.service.MediaService
+import com.lm.yandexdiskplayer.player.ControllerUiStates
+import com.lm.yandexdiskplayer.player.ControllerUiStatesImpl
 
-class MediaClient(private val mainActivity: MainActivity) {
+class MediaClient(private val mainActivity: MainActivity, val controllerUiStates: ControllerUiStates) {
+
+    var mediaController: MediaControllerCompat? = null
 
     fun buildTransportControls() {
-        val mediaController = MediaControllerCompat.getMediaController(mainActivity)
-        mediaController.registerCallback(controllerCallback)
-        val pbState = mediaController.playbackState.state.log
-        pbState.log
-        mediaController.playbackInfo.currentVolume.log
+        val mediaControllerCompat = MediaControllerCompat.getMediaController(mainActivity)
+        mediaController = mediaControllerCompat
+        mediaController?.registerCallback(controllerCallback)
+        mediaController?.transportControls?.play()
     }
 
     val controllerCallback by lazy {
@@ -27,18 +27,15 @@ class MediaClient(private val mainActivity: MainActivity) {
             override fun onMetadataChanged(metadata: MediaMetadataCompat?) {}
 
             override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-                state.log
             }
 
             override fun onSessionDestroyed() {
                 super.onSessionDestroyed()
                 mediaBrowser.disconnect()
-                "DIS".log
             }
 
             override fun onSessionReady() {
                 super.onSessionReady()
-                "READY".log
             }
         }
     }
@@ -64,11 +61,9 @@ class MediaClient(private val mainActivity: MainActivity) {
             }
 
             override fun onConnectionSuspended() {
-                "suspend".log
             }
 
             override fun onConnectionFailed() {
-                "error".log
             }
         }
     }

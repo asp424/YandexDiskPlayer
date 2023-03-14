@@ -17,8 +17,6 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,17 +26,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lm.yandexdiskplayer.player.PlayerState
-import com.lm.yandexdiskplayer.player.PlayerUiStates
+import com.lm.yandexdiskplayer.player.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun PlayingCard(
     mainScreenState: MainScreenState,
-    playerUiStates: PlayerUiStates,
+    controllerUiStates: ControllerUiStates,
     modifier: Modifier = Modifier
 ) = with(mainScreenState) {
-    Visibility(playerUiStates.isPlayingCardVisible) {
+    Visibility(controllerUiStates.isPlayingCardVisible) {
         Box(
             modifier
                 .fillMaxSize()
@@ -50,28 +48,28 @@ fun PlayingCard(
                     .padding(top = 300.dp), Arrangement.Center, Alignment.CenterHorizontally
             ) {
                 Text(
-                    playerUiStates.nowPlayingSong.name, fontWeight = FontWeight.Bold, fontSize = 20.sp,
+                    controllerUiStates.nowPlayingSong.name, fontWeight = FontWeight.Bold, fontSize = 20.sp,
                     modifier = modifier.padding(start = 20.dp, end = 20.dp)
                 )
                 Text(
-                    playerUiStates.nowPlayingSong.folder,
+                    controllerUiStates.nowPlayingSong.folder,
                     modifier.padding(top = 10.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
                     fontSize = 12.sp
                 )
-                SongProgress(mainScreenState, playerUiStates)
+                SongProgress(mainScreenState, controllerUiStates)
                 Row(
                     Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        playerUiStates.timeTextProgress,
+                        controllerUiStates.timeTextProgress,
                         modifier
                             .padding(start = 35.dp)
                             .offset(y = (-15).dp),
                         fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                     Text(
-                        playerUiStates.durationSong,
+                        controllerUiStates.durationSong,
                         modifier
                             .padding(end = 35.dp)
                             .offset(y = (-15).dp),
@@ -90,19 +88,19 @@ fun PlayingCard(
                     Icon(
                         Icons.Outlined.SkipPrevious,
                         null, modifier.playerBarPrevModifier,
-                        tint = if (playerUiStates.enablePrev) Color.Black else Color.LightGray
+                        tint = if (controllerUiStates.enablePrev) Color.Black else Color.LightGray
                     )
 
                     Icon(
-                        if (playerUiStates.playerState == PlayerState.PLAYING)
+                        if (controllerUiStates.playerState == PlayerState.PLAYING)
                             Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                         null, modifier.playerBarPauseModifier,
-                        tint = if (playerUiStates.enablePlay) Color.Black else Color.LightGray
+                        tint = if (controllerUiStates.enablePlay) Color.Black else Color.LightGray
                     )
                     Icon(
                         Icons.Outlined.SkipNext,
                         null, modifier.playerBarNextModifier,
-                        tint = if (playerUiStates.enableNext) Color.Black else Color.LightGray
+                        tint = if (controllerUiStates.enableNext) Color.Black else Color.LightGray
                     )
                 }
             }

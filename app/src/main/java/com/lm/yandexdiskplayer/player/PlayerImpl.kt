@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.lm.core.getSeconds
 import com.lm.core.tryCatch
 import com.lm.core.utils.getToken
+import com.lm.yandexapi.folders
 import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.retrofit.api.Callback.startRequest
 import com.lm.yandexdiskplayer.retrofit.api.LoadingResource
@@ -22,20 +23,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class PlayerImpl(
-    private val context: Context,
-    private val playerUiStates: PlayerUiStates
+    private val context: Context
 ) : Player {
 
-    @Stable
-    var player: MediaPlayer? = null
+    override var player: MediaPlayer? = null
 
-    @Stable
-    var playList: List<Song> = emptyList()
+    override var currentSong: Song? = null
+
+    override var currentPlaylist: List<Song> = emptyList()
 
     private var timeProgressJob: Job = Job().apply { cancel() }
 
-    override fun playSong() {
-        playerUiStates.muteStates()
+    override fun playSong(onPrepare: () -> Unit) {
         releasePlayer()
         player = MediaPlayer()
         tryCatch({
@@ -43,10 +42,7 @@ class PlayerImpl(
                 player?.apply {
                     setDataSource(it)
                     prepareAsync()
-                    setOnPreparedListener {
-                        setStart()
-                        playerUiStates.unMuteStates()
-                    }
+                    setOnPreparedListener { start(); onPrepare() }
                     setOnCompletionListener { autoplayNext() }
                 }
             }
@@ -54,30 +50,11 @@ class PlayerImpl(
     }
 
     override fun playPlaylist(song: Song, pathsList: List<Song>) {
-        playerUiStates.showPlayingCard()
-        playerUiStates.setSongInPlayingCard(song)
-        playList = pathsList
-        playSong()
+        currentPlaylist = pathsList
+        currentSong = song
     }
 
-    override fun autoplayNext(): Song? = with(playList) {
-        checkNextIndex(1).apply {
-            if (this == null) {
-                releasePlayer()
-            }
-        }?.apply {
-            playerUiStates.setSongInPlayingCard(this)
-            playSong()
-        }
-    }
 
-    override fun playPrevSong(): Song? = with(playList) {
-        nextSong(-1)?.apply { playerUiStates.setSongInPlayingCard(this) }
-    }
-
-    override fun playNextSong(): Song? = with(playList) {
-        nextSong(1)?.apply { playerUiStates.setSongInPlayingCard(this) }
-    }
 
     override fun releasePlayer() {
         player?.apply {
@@ -87,55 +64,42 @@ class PlayerImpl(
                 release()
             }
             )
-            playerUiStates.clearInfo()
-            playerUiStates.playerState = PlayerState.NULL
         }
     }
 
     private fun List<Song>.nextSong(nextOrPrev: Int) = checkNextIndex(nextOrPrev)?.apply {
-        tryCatch({
-            if (playerUiStates.playerState == PlayerState.PLAYING) playSong()
-            else releasePlayer()
-        })
+        currentSong = currentPlaylist[indexOf(currentSong) + nextOrPrev]
+        tryCatch({ playSong{} })
     }
 
     private fun List<Song>.checkNextIndex(nextOrPrev: Int) = getOrNull(
-        indexOf(playerUiStates.nowPlayingSong) + nextOrPrev
+        indexOf(currentSong) + nextOrPrev
     )
 
-    override fun playOrPause() {
-        player?.apply {
-            tryCatch({
-                when (playerUiStates.playerState) {
-                    PlayerState.PLAYING -> setPause()
-                    PlayerState.PAUSE -> setStart()
-                    PlayerState.NULL -> playSong()
-                    else -> Unit
-                }
-            })
+    override fun autoplayNext(): Song? = with(currentPlaylist) {
+        checkNextIndex(1).apply {
+            if (this == null) {
+                releasePlayer()
+            }
+        }?.apply {
+            playerUiStates.setSongInPlayingCard(this)
+            playSong{}
         }
     }
 
-    private fun setPause() {
-        player?.apply {
-            playerUiStates.playerState = PlayerState.PAUSE
-            timeProgressJob.cancel()
-            pause()
-        }
+    override fun playPrevSong(): Song? = with(currentPlaylist) {
+        nextSong(-1)
     }
 
-    private fun setStart() {
-        player?.apply {
-            playerUiStates.durationSong = duration.getSeconds
-            playerUiStates.playerState = PlayerState.PLAYING
-            startTimeProgress()
-            start()
-        }
+    override fun playNextSong(): Song? = with(currentPlaylist) {
+        nextSong(1)
     }
+
+    override fun pause() { player?.apply { tryCatch({ pause() }) } }
 
     private fun getUrl(onGet: (String) -> Unit) =
         CoroutineScope(Main).launch {
-            fetch(playerUiStates.nowPlayingSong.path, context.getToken).startRequest().collect {
+            fetch(currentSong!!.path, context.getToken).startRequest().collect {
                 if (it is LoadingResource.Success) onGet(it.data.href)
             }
         }
@@ -170,10 +134,6 @@ class PlayerImpl(
     }
 }
 
-@Composable
-fun rememberPlayer(
-    playerUiStates: PlayerUiStates,
-    context: Context = LocalContext.current
-): Player =
-    remember { PlayerImpl(context, playerUiStates) }
+val playerUiStates: ControllerUiStates by lazy { ControllerUiStatesImpl() }
+
 

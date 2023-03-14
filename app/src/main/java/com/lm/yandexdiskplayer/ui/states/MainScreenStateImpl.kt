@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
@@ -30,48 +31,53 @@ import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.resultHandler
 import com.lm.yandexapi.startAuth
-import com.lm.yandexdiskplayer.player.Player
-import com.lm.yandexdiskplayer.player.PlayerUiStates
-import kotlinx.coroutines.CoroutineDispatcher
+import com.lm.yandexdiskplayer.media_browser.client.MediaClient
+import com.lm.yandexdiskplayer.player
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private class MainScreenStateImpl(
-    private val player: Player,
-    private val playerUiStates: PlayerUiStates,
     private val context: Context,
-    private val coroutineDispatcher: CoroutineDispatcher = IO
+    private val mediaClient: MediaClient
 ) : MainScreenState {
 
     private var _isAuth by mutableStateOf(context.getToken.isNotEmpty())
 
     private var _isExpand by mutableStateOf(false)
 
+    private var _foldersList: SnapshotStateList<Folder> = mutableStateListOf()
+
     init {
-        if (_isAuth) loadList; _isAuth = false
+        if (_isAuth) loadFoldersList()
     }
 
-    private var foldersList: SnapshotStateList<Folder> = mutableStateListOf()
-
-    private val loadList
-        get() = CoroutineScope(coroutineDispatcher).launch {
-            context.folders.map { foldersList.add(it); if (!_isAuth) _isAuth = true }
+    override fun loadFoldersList() {
+        CoroutineScope(Dispatchers.IO).launch {
+            _foldersList = context.folders.toMutableStateList()
+            if (!mediaClient.controllerUiStates.columnVisible)
+                mediaClient.controllerUiStates.columnVisible = true
         }
+    }
 
     override val Modifier.authByClick: Modifier
         get() = composed {
             val launcher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult(),
-                onResult = context.resultHandler(onGetToken = { loadList }, onFailure = {})
+                onResult = context.resultHandler(onGetToken = { },
+                    onFailure = {})
             )
             clickable(
                 remember { MutableInteractionSource() }, null, onClick =
                 remember { { launcher.launch(context.startAuth()) } },
                 enabled = !_isAuth
             )
-                .offset(animDp(0.dp, 140.dp, isAuth), animDp(0.dp, (-330).dp, isAuth))
-                .size(animDp(160.dp, 70.dp, isAuth))
+
+                .offset(
+                    animDp(0.dp, 140.dp, mediaClient.controllerUiStates.columnVisible),
+                    animDp(0.dp, (-330).dp, mediaClient.controllerUiStates.columnVisible)
+                )
+                .size(animDp(160.dp, 70.dp, mediaClient.controllerUiStates.columnVisible))
         }
 
     override val Modifier.cardFolderModifier: Modifier
@@ -87,10 +93,10 @@ private class MainScreenStateImpl(
             remember { MutableInteractionSource() }, null,
             onClick = remember {
                 {
-                    player.playPlaylist(song,
-                        (foldersList.find { it.path == song.folder } ?: Folder()).listSongs
+                    context.player.playPlaylist(song, (_foldersList
+                        .find { it.path == song.folder } ?: Folder()).listSongs
                     )
-
+                    if (!mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
                 }
             }
         )
@@ -108,15 +114,22 @@ private class MainScreenStateImpl(
 
     override val Modifier.boxLogoModifier: Modifier get() = fillMaxSize()
     override val Modifier.playerBarPrevModifier: Modifier
-        get() = clickable(playerUiStates.enablePrev) { player.playPrevSong() }
+        get() = clickable(mediaClient.controllerUiStates.enablePrev) {
+            mediaClient.mediaController?.transportControls?.skipToPrevious()
+        }
             .padding(start = 80.dp)
             .size(60.dp)
     override val Modifier.playerBarNextModifier: Modifier
-        get() = clickable(playerUiStates.enableNext) { player.playNextSong() }
+        get() = clickable(mediaClient.controllerUiStates.enableNext) {
+            mediaClient.mediaController?.transportControls?.skipToNext()
+        }
             .padding(end = 80.dp)
             .size(60.dp)
     override val Modifier.playerBarPauseModifier: Modifier
-        get() = clickable(playerUiStates.enablePlay) { player.playOrPause() }.size(80.dp)
+        get() = clickable(mediaClient.controllerUiStates.enablePlay) {
+            mediaClient.mediaController?.transportControls?.pause()
+        }
+            .size(80.dp)
 
     override var isAuth: Boolean
         get() = _isAuth
@@ -131,20 +144,19 @@ private class MainScreenStateImpl(
         }
 
     override fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit) =
-        items(foldersList, { it.key }, { it }) { item(it) }
+        items(_foldersList, { it.key }, { it }) { item(it) }
 
-    override fun onSliderValueChange(): (Float) -> Unit = { player.timeProgress(it) }
+    override fun onSliderValueChange(): (Float) -> Unit = { context.player.timeProgress(it) }
 
-    override fun onSliderValueChangeFinished(): () -> Unit = { player.onSliderMove() }
+    override fun onSliderValueChangeFinished(): () -> Unit = { context.player.onSliderMove() }
 }
 
 @Composable
 fun rememberMainScreenState(
-    player: Player,
-    playerUiStates: PlayerUiStates,
+    mediaClient: MediaClient,
     context: Context = LocalContext.current
 ): MainScreenState =
-    remember { MainScreenStateImpl(player, playerUiStates, context) }
+    remember { MainScreenStateImpl(context, mediaClient) }
 
 
 
