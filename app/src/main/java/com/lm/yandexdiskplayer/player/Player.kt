@@ -1,31 +1,35 @@
 package com.lm.yandexdiskplayer.player
 
 import android.media.MediaPlayer
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.compose.runtime.Stable
 import com.lm.yandexapi.models.Song
 
 @Stable
 interface Player {
 
-    fun playSong(onPrepare: () -> Unit)
+    fun playNew(onPrepare: (MediaMetadataCompat) -> Unit)
+
+    fun prepareNew(onPrepare: (MediaMetadataCompat) -> Unit)
+
+    fun play()
+
+    fun playAfterPause(onPlay: (Long) -> Unit)
 
     fun playPlaylist(song: Song, pathsList: List<Song>)
 
     fun autoplayNext(): Song?
 
-    fun playNextSong(): Song?
+    fun playNextSong(state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit): Song?
 
-    fun playPrevSong(): Song?
+    fun playPrevSong(state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit): Song?
 
     fun releasePlayer()
 
-    fun pause()
+    fun seekTo(pos: Long)
 
-    fun timeProgress(newTime: Float)
-
-    fun onSliderMove()
-
-    var player: MediaPlayer?
+    fun pause(onPause: (Long) -> Unit)
 
     val currentSong: Song?
 

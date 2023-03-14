@@ -1,40 +1,46 @@
 package com.lm.yandexdiskplayer.player
 
 import android.content.Context
+import android.media.MediaMetadata
 import android.media.MediaPlayer
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import com.lm.core.getSeconds
+import android.os.Build
+import android.support.v4.media.MediaMetadataCompat
+import androidx.annotation.RequiresApi
 import com.lm.core.tryCatch
 import com.lm.core.utils.getToken
-import com.lm.yandexapi.folders
 import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.retrofit.api.Callback.startRequest
 import com.lm.yandexdiskplayer.retrofit.api.LoadingResource
 import com.lm.yandexdiskplayer.retrofit.api.fetch
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class PlayerImpl(
     private val context: Context
 ) : Player {
 
-    override var player: MediaPlayer? = null
+    private val metadataBuilder = MediaMetadataCompat.Builder()
+
+    private var player: MediaPlayer? = null
 
     override var currentSong: Song? = null
 
     override var currentPlaylist: List<Song> = emptyList()
 
-    private var timeProgressJob: Job = Job().apply { cancel() }
+    override fun playNew(onPrepare: (MediaMetadataCompat) -> Unit) = prepare {
+        player?.apply {
+            tryCatch({
+                start(); onPrepare(it)
+            })
+        }
+    }
 
-    override fun playSong(onPrepare: () -> Unit) {
+    override fun prepareNew(onPrepare: (MediaMetadataCompat) -> Unit) = prepare {
+        onPrepare(it)
+    }
+
+    private fun prepare(onPrepare: (MediaMetadataCompat) -> Unit) {
         releasePlayer()
         player = MediaPlayer()
         tryCatch({
@@ -42,11 +48,28 @@ class PlayerImpl(
                 player?.apply {
                     setDataSource(it)
                     prepareAsync()
-                    setOnPreparedListener { start(); onPrepare() }
+                    setOnPreparedListener { onPrepare(constructMetadata()) }
                     setOnCompletionListener { autoplayNext() }
                 }
             }
         })
+    }
+
+    override fun play() {
+        player?.apply {
+            tryCatch({
+                start()
+            })
+        }
+    }
+
+    override fun playAfterPause(onPlay: (Long) -> Unit) {
+        player?.apply {
+            tryCatch({
+                start()
+                onPlay(currentPosition.toLong())
+            })
+        }
     }
 
     override fun playPlaylist(song: Song, pathsList: List<Song>) {
@@ -54,22 +77,22 @@ class PlayerImpl(
         currentSong = song
     }
 
-
-
     override fun releasePlayer() {
-        player?.apply {
-            timeProgressJob.cancel()
-            tryCatch({
-                stop()
-                release()
-            }
-            )
-        }
+        player?.apply { tryCatch({ stop(); release() }) }
     }
 
-    private fun List<Song>.nextSong(nextOrPrev: Int) = checkNextIndex(nextOrPrev)?.apply {
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun seekTo(pos: Long) {
+        tryCatch({ player?.seekTo(pos, MediaPlayer.SEEK_NEXT_SYNC) })
+    }
+
+    private fun List<Song>.nextSong(
+        state: Int, nextOrPrev: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
+    ) = checkNextIndex(nextOrPrev)?.apply {
         currentSong = currentPlaylist[indexOf(currentSong) + nextOrPrev]
-        tryCatch({ playSong{} })
+        metadata(constructMetadata())
+            if (state == 0) prepareNew { onPrepare() }
+            else playNew { onPrepare() }
     }
 
     private fun List<Song>.checkNextIndex(nextOrPrev: Int) = getOrNull(
@@ -77,25 +100,26 @@ class PlayerImpl(
     )
 
     override fun autoplayNext(): Song? = with(currentPlaylist) {
-        checkNextIndex(1).apply {
-            if (this == null) {
-                releasePlayer()
-            }
-        }?.apply {
-            playerUiStates.setSongInPlayingCard(this)
-            playSong{}
+        checkNextIndex(1).apply { if (this == null) releasePlayer() }?.apply { playNew {} }
+    }
+
+    override fun playPrevSong(
+        state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
+    ): Song? =
+        with(currentPlaylist) {
+            nextSong(state, -1, metadata = { metadata(it) }, onPrepare = { onPrepare() })
         }
+
+    override fun playNextSong(
+        state: Int,
+        metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
+    ): Song? = with(currentPlaylist) {
+        nextSong(state, 1, metadata = { metadata(it) }, onPrepare = { onPrepare() })
     }
 
-    override fun playPrevSong(): Song? = with(currentPlaylist) {
-        nextSong(-1)
+    override fun pause(onPause: (Long) -> Unit) {
+        player?.apply { tryCatch({ pause(); onPause(currentPosition.toLong()) }) }
     }
-
-    override fun playNextSong(): Song? = with(currentPlaylist) {
-        nextSong(1)
-    }
-
-    override fun pause() { player?.apply { tryCatch({ pause() }) } }
 
     private fun getUrl(onGet: (String) -> Unit) =
         CoroutineScope(Main).launch {
@@ -104,36 +128,12 @@ class PlayerImpl(
             }
         }
 
-    private fun startTimeProgress() {
-        player?.apply {
-            timeProgressJob = CoroutineScope(IO).launch {
-                while (isActive && playerUiStates.playerState == PlayerState.PLAYING) {
-                    with((1f / duration.toFloat()) * currentPosition.toFloat()) {
-                        playerUiStates.timeProgress = if (!isNaN()) this else 0f
-                    }
-                    playerUiStates.timeTextProgress = currentPosition.getSeconds
-                    delay(10)
-                }
-            }
-        }
-    }
-
-    override fun timeProgress(newTime: Float) {
-        player?.apply {
-            timeProgressJob.cancel()
-            playerUiStates.timeProgress = newTime
-            playerUiStates.timeTextProgress = duration.getTextProgress.getSeconds
-        }
-    }
-
-    private val Int.getTextProgress get() = (this / (1f / playerUiStates.timeProgress)).toInt()
-
-    override fun onSliderMove() {
-        player?.apply { seekTo(duration.getTextProgress) }
-        startTimeProgress()
-    }
+    private fun constructMetadata() = metadataBuilder
+        .putText(MediaMetadata.METADATA_KEY_TITLE, currentSong?.name)
+        .putText(MediaMetadata.METADATA_KEY_ARTIST, currentSong?.folder)
+        .putLong(MediaMetadata.METADATA_KEY_DURATION, player?.duration?.toLong() ?: 0L)
+        .build()
 }
 
-val playerUiStates: ControllerUiStates by lazy { ControllerUiStatesImpl() }
 
 

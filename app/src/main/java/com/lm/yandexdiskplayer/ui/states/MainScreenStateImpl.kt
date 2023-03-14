@@ -97,6 +97,10 @@ private class MainScreenStateImpl(
                         .find { it.path == song.folder } ?: Folder()).listSongs
                     )
                     if (!mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
+                    else {
+                        mediaClient.mediaController?.transportControls?.stop()
+                        mediaClient.mediaController?.transportControls?.play()
+                    }
                 }
             }
         )
@@ -146,9 +150,9 @@ private class MainScreenStateImpl(
     override fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit) =
         items(_foldersList, { it.key }, { it }) { item(it) }
 
-    override fun onSliderValueChange(): (Float) -> Unit = { context.player.timeProgress(it) }
+    override fun onSliderValueChange(): (Float) -> Unit = {  }
 
-    override fun onSliderValueChangeFinished(): () -> Unit = { context.player.onSliderMove() }
+    override fun onSliderValueChangeFinished(): () -> Unit = {  }
 }
 
 @Composable

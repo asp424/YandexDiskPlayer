@@ -1,9 +1,9 @@
 package com.lm.yandexdiskplayer.media_browser.service
 
 import android.app.Notification
-import android.app.NotificationManager
 import android.content.Intent
 import android.media.MediaMetadata
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,7 +18,9 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY_PAUSE
-import android.support.v4.media.session.PlaybackStateCompat.STATE_BUFFERING
+import android.support.v4.media.session.PlaybackStateCompat.STATE_CONNECTING
+import android.support.v4.media.session.PlaybackStateCompat.STATE_NONE
+import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -29,7 +31,6 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.os.bundleOf
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
-import com.lm.core.log
 import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.R
 import com.lm.yandexdiskplayer.player
@@ -44,7 +45,7 @@ class MediaService : MediaBrowserServiceCompat() {
 
     private var mediaSession: MediaSessionCompat? = null
 
-    private val notificationManager by  lazy {
+    private val notificationManager by lazy {
         getSystemService<NotificationManagerCompat>()
     }
 
@@ -73,10 +74,14 @@ class MediaService : MediaBrowserServiceCompat() {
             isActive = true
         }
         startForegroundService(Intent(this@MediaService, MediaService::class.java))
-        mediaSession?.setCallback(SessionCallback(player,
-            { notificationBuilder(0).build() },
-            { notificationBuilder(1).build() },
-            this@MediaService))
+        mediaSession?.setCallback(
+            SessionCallback(
+                player,
+                { notificationBuilder(0).build() },
+                { notificationBuilder(1).build() },
+                this@MediaService
+            )
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -91,45 +96,115 @@ class MediaService : MediaBrowserServiceCompat() {
         private val service: MediaService
     ) : MediaSessionCompat.Callback() {
 
-        private val metadataBuilder = MediaMetadataCompat.Builder()
-
         private val controller = service.mediaSession?.controller
 
         override fun onPlay() {
-            player.playSong{
-                service.mediaSession?.setMetadata(
-                    metadataBuilder
-                        .putText(MediaMetadata.METADATA_KEY_TITLE, player.currentSong?.name)
-                        .putText(MediaMetadata.METADATA_KEY_ARTIST, player.currentSong?.folder)
-                        .putLong(MediaMetadata.METADATA_KEY_DURATION, player.player?.duration!!.toLong())
-                        .build()
-                )
-                showNotify(pauseNotify)
+            if (getState == STATE_PAUSED) {
+                player.playAfterPause {
+                    service.stateBuilder.setState(STATE_PLAYING, it, 1f)
+                    setState
+                    showNotify(pauseNotify)
+                }
+            } else {
+                player.playNew {
+                    service.mediaSession?.setMetadata(it)
+                    service.stateBuilder.setState(STATE_PLAYING, 0, 1f)
+                    setState
+                    showNotify(pauseNotify)
+                }
             }
         }
 
         override fun onPause() {
-            showNotify(playNotify)
-            player.pause()
+            player.pause {
+                service.stateBuilder.setState(STATE_PAUSED, it, 1f)
+                setState
+                showNotify(playNotify)
+            }
         }
 
         override fun onSkipToPrevious() {
-            player.playPrevSong()
-            showNotify(pauseNotify)
+            if (getState == STATE_PLAYING) {
+                service.stateBuilder.setState(STATE_CONNECTING, 0, 1f)
+                setState
+                showNotify(pauseNotify)
+                player.playPrevSong(1, onPrepare = {
+                    player.play()
+                }, metadata = {
+                    service.mediaSession?.setMetadata(it)
+                    service.stateBuilder.setState(STATE_PLAYING, 0, 1f)
+                    setState
+                    showNotify(pauseNotify)
+                })
+            } else {
+                service.stateBuilder.setState(STATE_CONNECTING, 0, 1f)
+                setState
+                showNotify(playNotify)
+                player.playPrevSong(0, onPrepare = {
+
+                }, metadata = {
+                    service.mediaSession?.setMetadata(it)
+                    service.stateBuilder.setState(STATE_PAUSED, 0, 1f)
+                    setState
+                    showNotify(playNotify)
+                })
+            }
         }
 
         override fun onSkipToNext() {
-            player.playNextSong()
-            showNotify(pauseNotify)
+            if (getState == STATE_PLAYING) {
+                service.stateBuilder.setState(STATE_CONNECTING, 0, 1f)
+                setState
+                showNotify(pauseNotify)
+                player.playNextSong(1, onPrepare = {
+                    player.play()
+                }, metadata = {
+                    service.mediaSession?.setMetadata(it)
+                    service.stateBuilder.setState(STATE_PLAYING, 0, 1f)
+                    setState
+                    showNotify(pauseNotify)
+                })
+            } else {
+                service.stateBuilder.setState(STATE_CONNECTING, 0, 1f)
+                setState
+                showNotify(playNotify)
+                player.playNextSong(0, onPrepare = {
+
+                }, metadata = {
+                    service.mediaSession?.setMetadata(it)
+                    service.stateBuilder.setState(STATE_PAUSED, 0, 1f)
+                    setState
+                    showNotify(playNotify)
+                })
+            }
         }
 
-        override fun onSeekTo(pos: Long) {}
-        override fun onStop() {}
+        override fun onSeekTo(pos: Long) {
+            player.seekTo(pos)
+            if (getState == STATE_PLAYING) {
+                service.stateBuilder.setState(STATE_PLAYING, pos, 1f)
+                setState
+            }
+        }
+
+        override fun onStop() {
+            service.stateBuilder.setState(STATE_NONE, 0, 0f)
+            setState
+            player.releasePlayer()
+        }
+
         override fun onRewind() {}
         override fun onSkipToQueueItem(id: Long) {}
 
-        private fun showNotify(notify: () -> Notification)
-        = service.startForeground(1001, notify.invoke())
+        private fun showNotify(notify: () -> Notification) =
+            service.startForeground(1001, notify.invoke())
+
+        val setState
+            get() = run {
+                service.mediaSession?.setPlaybackState(service.stateBuilder.build())
+            }
+
+        val getState get() = run { controller?.playbackState?.state }
     }
 
     override fun onGetRoot(
@@ -174,19 +249,16 @@ class MediaService : MediaBrowserServiceCompat() {
         NotificationCompat.Builder(
             this@MediaService, notificationChannelId
         ).apply {
-            stateBuilder
-                .setState(STATE_PLAYING, 0, 1f)
-                .setBufferedPosition(0)
-            mediaSession?.setPlaybackState(stateBuilder.build())
-            mediaSession?.setMetadata(
-                currentMetaData
-                    .putText(MediaMetadata.METADATA_KEY_TITLE, player.currentSong?.name)
-                    .putText(MediaMetadata.METADATA_KEY_ARTIST, player.currentSong?.folder)
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, player.player?.duration!!.toLong())
-                    .build()
+            setContentTitle(
+                mediaSession?.controller?.metadata?.getString(
+                    MediaMetadata.METADATA_KEY_TITLE
+                )
             )
-            setContentTitle(player.currentSong?.name)
-            setContentText(player.currentSong?.folder)
+            setContentText(
+                mediaSession?.controller?.metadata?.getString(
+                    MediaMetadata.METADATA_KEY_ARTIST
+                )
+            )
             setLargeIcon(getDrawable(R.drawable.disk_logo)?.toBitmap())
             setCategory(Notification.CATEGORY_TRANSPORT)
             setAutoCancel(false)
@@ -201,7 +273,6 @@ class MediaService : MediaBrowserServiceCompat() {
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             setSmallIcon(R.drawable.disk_logo)
             color = ContextCompat.getColor(this@MediaService, R.color.black)
-
             setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setShowActionsInCompactView(0, 1, 2)
@@ -215,17 +286,21 @@ class MediaService : MediaBrowserServiceCompat() {
                     )
                 )
             )
-            if(action == 0) addAction( NotificationCompat.Action(
-                R.drawable.pause, "Pause",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(
-                    this@MediaService, ACTION_PAUSE
+            if (action == 0) addAction(
+                NotificationCompat.Action(
+                    R.drawable.pause, "Pause",
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this@MediaService, ACTION_PAUSE
+                    )
                 )
-            )) else addAction(NotificationCompat.Action(
-                R.drawable.play, "Play",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(
-                    this@MediaService, ACTION_PLAY
+            ) else addAction(
+                NotificationCompat.Action(
+                    R.drawable.play, "Play",
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this@MediaService, ACTION_PLAY
+                    )
                 )
-            ))
+            )
             addAction(
                 NotificationCompat.Action(
                     R.drawable.play_skip_forward, getString(R.string.next),

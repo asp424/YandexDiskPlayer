@@ -8,7 +8,6 @@ import androidx.activity.compose.setContent
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
 import com.lm.yandexdiskplayer.player.ControllerUiStates
 import com.lm.yandexdiskplayer.player.ControllerUiStatesImpl
-import com.lm.yandexdiskplayer.player.playerUiStates
 import com.lm.yandexdiskplayer.ui.cells.Logo
 import com.lm.yandexdiskplayer.ui.cells.MainScreen
 import com.lm.yandexdiskplayer.ui.cells.PlayingCard
