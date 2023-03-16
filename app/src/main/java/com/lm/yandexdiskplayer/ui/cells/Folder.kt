@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.Card
@@ -28,12 +27,13 @@ fun Folder(
         with(modifier) {
             with(folderInfo) {
                 Column {
-                    Card(cardFolderModifier, border = BorderStroke(1.dp, Color.Black)) {
+                    Card(cardFolderModifier(folderInfo), border = BorderStroke(1.dp, Color.Black),
+                        ) {
                         Row(modifier.rawModifier, verticalAlignment = CenterVertically) {
                             Icon(Icons.Outlined.Folder, null)
-                            Column(modifier.fillMaxSize(), Center) {
+                            Column(columnModifier, Center) {
                                 Text(path, textPathModifier)
-                                Text(date, textDateModifier)
+                                //Text(date, textDateModifier)
                             }
                         }
                     }

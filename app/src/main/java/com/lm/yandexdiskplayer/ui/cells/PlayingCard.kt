@@ -25,8 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lm.yandexdiskplayer.player.PlayerState
 import com.lm.yandexdiskplayer.player.ControllerUiStates
+import com.lm.yandexdiskplayer.player.PlayerState
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @OptIn(ExperimentalAnimationApi::class)

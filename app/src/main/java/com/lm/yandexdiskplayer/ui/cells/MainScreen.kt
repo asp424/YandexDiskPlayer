@@ -23,9 +23,9 @@ fun MainScreen(
         LazyColumn(modifier.columnModifier) { folders { Folder(mainScreenState, it) } }
     }
     val mainActivity = LocalContext.current as MainActivity
-        BackHandler {
-            if (controllerUiStates.isPlayingCardVisible) controllerUiStates.hidePlayingCard()
-            else mainActivity.finish()
+    BackHandler {
+        if (controllerUiStates.isPlayingCardVisible) controllerUiStates.hidePlayingCard()
+        else mainActivity.finish()
     }
 }
 

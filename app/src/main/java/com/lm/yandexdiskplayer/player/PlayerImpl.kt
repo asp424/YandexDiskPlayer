@@ -28,19 +28,34 @@ class PlayerImpl(
 
     override var currentPlaylist: List<Song> = emptyList()
 
-    override fun playNew(onPrepare: (MediaMetadataCompat) -> Unit) = prepare {
-        player?.apply {
-            tryCatch({
-                start(); onPrepare(it)
-            })
+    override fun playNew(onPrepare: MediaMetadataCompat.() -> Unit, onCompletion: () -> Unit) =
+        prepare(onPrepare = {
+            player?.apply {
+                tryCatch({
+                    start(); onPrepare(it)
+                })
+            }
+        }, { onCompletion() })
+
+    override fun prepareNew(onPrepare: (MediaMetadataCompat) -> Unit) = prepare(onPrepare = {
+        onPrepare(it)
+    }) {}
+
+    override fun next(isPlayAble: MediaMetadataCompat.() -> Unit) {
+        currentPlaylist.getOrNull(currentPlaylist.indexOf(currentSong) + 1)?.apply {
+            currentSong = this
+            isPlayAble(constructMetadata())
         }
     }
 
-    override fun prepareNew(onPrepare: (MediaMetadataCompat) -> Unit) = prepare {
-        onPrepare(it)
+    override fun prev(isPlayAble: MediaMetadataCompat.() -> Unit) {
+        currentPlaylist.getOrNull(currentPlaylist.indexOf(currentSong) - 1)?.apply {
+            currentSong = this
+            isPlayAble(constructMetadata())
+        }
     }
 
-    private fun prepare(onPrepare: (MediaMetadataCompat) -> Unit) {
+    private fun prepare(onPrepare: (MediaMetadataCompat) -> Unit, onCompletion: () -> Unit) {
         releasePlayer()
         player = MediaPlayer()
         tryCatch({
@@ -49,18 +64,10 @@ class PlayerImpl(
                     setDataSource(it)
                     prepareAsync()
                     setOnPreparedListener { onPrepare(constructMetadata()) }
-                    setOnCompletionListener { autoplayNext() }
+                    setOnCompletionListener { onCompletion() }
                 }
             }
         })
-    }
-
-    override fun play() {
-        player?.apply {
-            tryCatch({
-                start()
-            })
-        }
     }
 
     override fun playAfterPause(onPlay: (Long) -> Unit) {
@@ -72,7 +79,7 @@ class PlayerImpl(
         }
     }
 
-    override fun playPlaylist(song: Song, pathsList: List<Song>) {
+    override fun loadSongs(song: Song, pathsList: List<Song>) {
         currentPlaylist = pathsList
         currentSong = song
     }
@@ -84,37 +91,6 @@ class PlayerImpl(
     @RequiresApi(Build.VERSION_CODES.O)
     override fun seekTo(pos: Long) {
         tryCatch({ player?.seekTo(pos, MediaPlayer.SEEK_NEXT_SYNC) })
-    }
-
-    private fun List<Song>.nextSong(
-        state: Int, nextOrPrev: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
-    ) = checkNextIndex(nextOrPrev)?.apply {
-        currentSong = currentPlaylist[indexOf(currentSong) + nextOrPrev]
-        metadata(constructMetadata())
-            if (state == 0) prepareNew { onPrepare() }
-            else playNew { onPrepare() }
-    }
-
-    private fun List<Song>.checkNextIndex(nextOrPrev: Int) = getOrNull(
-        indexOf(currentSong) + nextOrPrev
-    )
-
-    override fun autoplayNext(): Song? = with(currentPlaylist) {
-        checkNextIndex(1).apply { if (this == null) releasePlayer() }?.apply { playNew {} }
-    }
-
-    override fun playPrevSong(
-        state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
-    ): Song? =
-        with(currentPlaylist) {
-            nextSong(state, -1, metadata = { metadata(it) }, onPrepare = { onPrepare() })
-        }
-
-    override fun playNextSong(
-        state: Int,
-        metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit
-    ): Song? = with(currentPlaylist) {
-        nextSong(state, 1, metadata = { metadata(it) }, onPrepare = { onPrepare() })
     }
 
     override fun pause(onPause: (Long) -> Unit) {

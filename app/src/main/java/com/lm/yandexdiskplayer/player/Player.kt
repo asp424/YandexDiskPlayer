@@ -9,21 +9,17 @@ import com.lm.yandexapi.models.Song
 @Stable
 interface Player {
 
-    fun playNew(onPrepare: (MediaMetadataCompat) -> Unit)
+    fun playNew(onPrepare: MediaMetadataCompat.() -> Unit, onCompletion: () -> Unit)
+
+    fun next(isPlayAble: MediaMetadataCompat.() -> Unit)
+
+    fun prev(isPlayAble: MediaMetadataCompat.() -> Unit)
 
     fun prepareNew(onPrepare: (MediaMetadataCompat) -> Unit)
 
-    fun play()
-
     fun playAfterPause(onPlay: (Long) -> Unit)
 
-    fun playPlaylist(song: Song, pathsList: List<Song>)
-
-    fun autoplayNext(): Song?
-
-    fun playNextSong(state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit): Song?
-
-    fun playPrevSong(state: Int, metadata: (MediaMetadataCompat) -> Unit, onPrepare: () -> Unit): Song?
+    fun loadSongs(song: Song, pathsList: List<Song>)
 
     fun releasePlayer()
 

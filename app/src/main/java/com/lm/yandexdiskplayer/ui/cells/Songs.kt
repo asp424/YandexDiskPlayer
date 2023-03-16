@@ -18,14 +18,16 @@ fun Songs(
     mainScreenState: MainScreenState,
     folder: Folder,
     modifier: Modifier = Modifier
-) = Visibility(mainScreenState.isExpand) {
-    Column {
-        folder.listSongs.map {
-            Card(
-                with(mainScreenState){ modifier.cardSongModifier(it) },
-                colors = CardDefaults.cardColors(containerColor = songCard)
-            ) {
-                Text(it.name, with(mainScreenState){ modifier.textSongsModifier }, color = White)
+) {
+    Visibility(mainScreenState.isExpand) {
+        Column {
+            folder.listSongs.map {
+                Card(
+                    with(mainScreenState){ modifier.cardSongModifier(it) },
+                    colors = CardDefaults.cardColors(containerColor = songCard)
+                ) {
+                    Text(it.name, with(mainScreenState){ modifier.textSongsModifier }, color = White)
+                }
             }
         }
     }

@@ -1,24 +1,30 @@
 package com.lm.yandexdiskplayer.media_browser.client
 
 import android.content.ComponentName
+import android.os.Build
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.annotation.RequiresApi
 import com.lm.yandexdiskplayer.MainActivity
 import com.lm.yandexdiskplayer.media_browser.service.MediaService
 import com.lm.yandexdiskplayer.player.ControllerUiStates
-import com.lm.yandexdiskplayer.player.ControllerUiStatesImpl
 
-class MediaClient(private val mainActivity: MainActivity, val controllerUiStates: ControllerUiStates) {
-
+@RequiresApi(Build.VERSION_CODES.O)
+class MediaClient(
+    private val mainActivity: MainActivity,
+    val controllerUiStates: ControllerUiStates
+)  {
     var mediaController: MediaControllerCompat? = null
 
     fun buildTransportControls() {
         val mediaControllerCompat = MediaControllerCompat.getMediaController(mainActivity)
         mediaController = mediaControllerCompat
         mediaController?.registerCallback(controllerCallback)
-        mediaController?.transportControls?.play()
+        mediaBrowser.subscribe("root", controllerUiStates)
+        //   mediaController?.transportControls?.stop()
+        //  mediaController?.transportControls?.play()
     }
 
     val controllerCallback by lazy {

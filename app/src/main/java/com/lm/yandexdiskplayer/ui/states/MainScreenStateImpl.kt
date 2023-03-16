@@ -1,8 +1,10 @@
 package com.lm.yandexdiskplayer.ui.states
 
 import android.content.Context
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,11 +34,12 @@ import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.resultHandler
 import com.lm.yandexapi.startAuth
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
-import com.lm.yandexdiskplayer.player
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
+@RequiresApi(Build.VERSION_CODES.O)
 private class MainScreenStateImpl(
     private val context: Context,
     private val mediaClient: MediaClient
@@ -49,7 +52,8 @@ private class MainScreenStateImpl(
     private var _foldersList: SnapshotStateList<Folder> = mutableStateListOf()
 
     init {
-        if (_isAuth) loadFoldersList()
+        //  if (_isAuth) loadFoldersList()
+        if (!mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
     }
 
     override fun loadFoldersList() {
@@ -80,35 +84,34 @@ private class MainScreenStateImpl(
                 .size(animDp(160.dp, 70.dp, mediaClient.controllerUiStates.columnVisible))
         }
 
-    override val Modifier.cardFolderModifier: Modifier
-        get() = composed {
-            padding(start = 10.dp, end = 10.dp).clickable(
-                remember { MutableInteractionSource() }, null,
-                onClick = remember { { _isExpand = !_isExpand } }
-            )
-        }
-
-    override fun Modifier.cardSongModifier(song: Song): Modifier = composed {
-        padding(start = 50.dp).clickable(
+    override fun Modifier.cardFolderModifier(folder: Folder): Modifier = composed {
+        padding(start = 10.dp, end = 10.dp).clickable(
             remember { MutableInteractionSource() }, null,
             onClick = remember {
                 {
-                    context.player.playPlaylist(song, (_foldersList
-                        .find { it.path == song.folder } ?: Folder()).listSongs
-                    )
-                    if (!mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
-                    else {
-                        mediaClient.mediaController?.transportControls?.stop()
-                        mediaClient.mediaController?.transportControls?.play()
-                    }
+                    _isExpand = !_isExpand
                 }
             }
         )
     }
 
-    override val Modifier.columnModifier get() = fillMaxSize().padding(top = 55.dp)
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun Modifier.cardSongModifier(song: Song): Modifier = composed {
+        padding(start = 50.dp).clickable(
+            remember { MutableInteractionSource() }, null,
+            onClick = remember {
+                {
+                    mediaClient.mediaController?.transportControls?.playFromMediaId(
+                        song.path, null
+                    )
+                }
+            }
+        )
+    }
 
-    override val Modifier.textPathModifier get() = padding(10.dp, 10.dp, 10.dp, 0.dp)
+    override val Modifier.columnModifier get() = fillMaxSize()
+
+    override val Modifier.textPathModifier get() = padding(10.dp, 20.dp, 10.dp, 20.dp)
 
     override val Modifier.textDateModifier: Modifier get() = padding(10.dp, 0.dp, 10.dp, 10.dp)
 
@@ -118,22 +121,23 @@ private class MainScreenStateImpl(
 
     override val Modifier.boxLogoModifier: Modifier get() = fillMaxSize()
     override val Modifier.playerBarPrevModifier: Modifier
+        @RequiresApi(Build.VERSION_CODES.O)
         get() = clickable(mediaClient.controllerUiStates.enablePrev) {
             mediaClient.mediaController?.transportControls?.skipToPrevious()
         }
             .padding(start = 80.dp)
             .size(60.dp)
     override val Modifier.playerBarNextModifier: Modifier
+        @RequiresApi(Build.VERSION_CODES.O)
         get() = clickable(mediaClient.controllerUiStates.enableNext) {
             mediaClient.mediaController?.transportControls?.skipToNext()
-        }
-            .padding(end = 80.dp)
+        }.padding(end = 80.dp)
             .size(60.dp)
     override val Modifier.playerBarPauseModifier: Modifier
+        @RequiresApi(Build.VERSION_CODES.O)
         get() = clickable(mediaClient.controllerUiStates.enablePlay) {
             mediaClient.mediaController?.transportControls?.pause()
-        }
-            .size(80.dp)
+        }.size(80.dp)
 
     override var isAuth: Boolean
         get() = _isAuth
@@ -147,14 +151,16 @@ private class MainScreenStateImpl(
             _isExpand = value
         }
 
-    override fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit) =
-        items(_foldersList, { it.key }, { it }) { item(it) }
+    override fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit) {
+        items(mediaClient.controllerUiStates.folderList, { it.path }, { it }) { item(it) }
+    }
 
-    override fun onSliderValueChange(): (Float) -> Unit = {  }
+    override fun onSliderValueChange(): (Float) -> Unit = { }
 
-    override fun onSliderValueChangeFinished(): () -> Unit = {  }
+    override fun onSliderValueChangeFinished(): () -> Unit = { }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun rememberMainScreenState(
     mediaClient: MediaClient,

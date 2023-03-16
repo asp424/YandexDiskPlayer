@@ -17,7 +17,7 @@ interface MainScreenState {
     val Modifier.textPathModifier: Modifier
     val Modifier.textDateModifier: Modifier
     val Modifier.rawModifier: Modifier
-    val Modifier.cardFolderModifier: Modifier
+    fun Modifier.cardFolderModifier(folder: Folder): Modifier
     val Modifier.textSongsModifier: Modifier
     val Modifier.boxLogoModifier: Modifier
     val Modifier.playerBarPrevModifier: Modifier

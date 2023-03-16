@@ -1,21 +1,23 @@
 package com.lm.yandexdiskplayer
 
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.session.MediaControllerCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
 import com.lm.yandexdiskplayer.player.ControllerUiStates
-import com.lm.yandexdiskplayer.player.ControllerUiStatesImpl
 import com.lm.yandexdiskplayer.ui.cells.Logo
 import com.lm.yandexdiskplayer.ui.cells.MainScreen
 import com.lm.yandexdiskplayer.ui.cells.PlayingCard
 import com.lm.yandexdiskplayer.ui.states.rememberMainScreenState
 
+@RequiresApi(Build.VERSION_CODES.O)
 class MainActivity : ComponentActivity() {
 
-    private val controllerUiStates: ControllerUiStates by lazy { ControllerUiStatesImpl() }
+    private val controllerUiStates: ControllerUiStates by lazy { ControllerUiStates() }
 
     private val mediaClient by lazy { MediaClient(this, controllerUiStates) }
 

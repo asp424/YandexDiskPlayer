@@ -12,6 +12,12 @@ import com.yandex.disk.rest.json.Resource
 import java.io.File
 import java.io.OutputStream
 
+val Context.songs
+    get() = runCatching {
+        RestClient(credential).getFlatResourceList(flatResourcesArgs).items.map { s ->
+            Song(s.name, s.size.toString(), s.path.path, s.getFolder)
+        }.sortedBy { song -> song.folder }.filter { it.name.filterByType }
+    }.getOrDefault(emptyList())
 val Context.folders
     get() = runCatching {
         val resources = RestClient(credential).getFlatResourceList(flatResourcesArgs).items
