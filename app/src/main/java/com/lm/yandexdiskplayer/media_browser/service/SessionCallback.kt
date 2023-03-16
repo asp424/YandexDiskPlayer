@@ -9,6 +9,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY
+import android.support.v4.media.session.PlaybackStateCompat.ACTION_REWIND
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_SEEK_TO
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_SKIP_TO_NEXT
 import android.support.v4.media.session.PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
@@ -18,8 +19,8 @@ import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
 import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
-import com.lm.core.log
 import com.lm.yandexapi.models.Song
+import com.lm.yandexdiskplayer.media_browser.service.Notify.Companion.notificationId
 import com.lm.yandexdiskplayer.player
 
 context(MediaService)
@@ -50,11 +51,11 @@ class SessionCallback(
     }
 
     override fun onSkipToPrevious() {
-        player.prev { nextPrev }
+        if (player.isFree) player.prev { nextPrev }
     }
 
     override fun onSkipToNext() {
-        player.next { nextPrev }
+        if (player.isFree) player.next { nextPrev }
     }
 
     override fun onSeekTo(pos: Long) {
@@ -65,12 +66,17 @@ class SessionCallback(
         setStateBuilder(STATE_NONE, 0); player.releasePlayer()
     }
 
+    override fun onRewind() {
+        stopSelf()
+        super.onRewind()
+    }
+
     private fun showNotify(notify: () -> Notification) =
-        notificationManager?.notify(1001, notify.invoke())
+        notificationManager?.notify(notificationId, notify.invoke())
 
     override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
         val song = songsList.find { it.path == mediaId } ?: Song()
-        val playList = songsMap[mediaId?.substringBefore(song.name)]?: emptyList()
+        val playList = songsMap[mediaId?.substringBefore(song.name)] ?: emptyList()
         player.loadSongs(song, playList.sortedBy { it.name })
         mediaSession?.controller?.transportControls?.stop()
         mediaSession?.controller?.transportControls?.play()
@@ -90,21 +96,21 @@ class SessionCallback(
 
     private val MediaMetadataCompat.nextPrev
         get() = run {
-            if (getState == STATE_PLAYING) {
-                setMetadata
-                setStateBuilder(STATE_PLAYING, 0)
-                showNotify { notify(0) }
-                controller?.transportControls?.play()
-            } else {
-                setMetadata
-                setStateBuilder(STATE_PAUSED, 0)
-                showNotify { notify(1) }
-                player.prepareNew {
-                    it.setMetadata
+                if (getState == STATE_PLAYING) {
+                    setMetadata
+                    setStateBuilder(STATE_PLAYING, 0)
+                    showNotify { notify(0) }
+                    controller?.transportControls?.play()
+                } else {
+                    setMetadata
                     setStateBuilder(STATE_PAUSED, 0)
                     showNotify { notify(1) }
+                    player.prepareNew {
+                        it.setMetadata
+                        setStateBuilder(STATE_PAUSED, 0)
+                        showNotify { notify(1) }
+                    }
                 }
-            }
         }
 
     private val controller by lazy { mediaSession?.controller }
@@ -112,7 +118,7 @@ class SessionCallback(
     private val stateBuilder: PlaybackStateCompat.Builder by lazy {
         PlaybackStateCompat.Builder().setActions(
             ACTION_PLAY or ACTION_PAUSE or ACTION_STOP
-                    or ACTION_SKIP_TO_PREVIOUS or ACTION_SKIP_TO_NEXT or ACTION_SEEK_TO
+                    or ACTION_SKIP_TO_PREVIOUS or ACTION_SKIP_TO_NEXT or ACTION_SEEK_TO or ACTION_REWIND
         )
     }
 }

@@ -7,7 +7,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
-import com.lm.yandexdiskplayer.player.Player
 
 @Stable
 interface MainScreenState {

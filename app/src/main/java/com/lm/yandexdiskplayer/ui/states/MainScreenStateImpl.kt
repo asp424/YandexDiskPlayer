@@ -1,6 +1,7 @@
 package com.lm.yandexdiskplayer.ui.states
 
 import android.content.Context
+import android.media.MediaMetadata
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,8 +35,10 @@ import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.resultHandler
 import com.lm.yandexapi.startAuth
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
+import com.lm.yandexdiskplayer.player.PlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -104,6 +107,8 @@ private class MainScreenStateImpl(
                     mediaClient.mediaController?.transportControls?.playFromMediaId(
                         song.path, null
                     )
+                    mediaClient.controllerUiStates.isPlayingCardVisible = true
+                    mediaClient.controllerUiStates.nowPlayingSong = song
                 }
             }
         )
@@ -136,7 +141,9 @@ private class MainScreenStateImpl(
     override val Modifier.playerBarPauseModifier: Modifier
         @RequiresApi(Build.VERSION_CODES.O)
         get() = clickable(mediaClient.controllerUiStates.enablePlay) {
+            if(mediaClient.controllerUiStates.playerState == PlayerState.PLAYING)
             mediaClient.mediaController?.transportControls?.pause()
+            else mediaClient.mediaController?.transportControls?.play()
         }.size(80.dp)
 
     override var isAuth: Boolean
@@ -155,9 +162,19 @@ private class MainScreenStateImpl(
         items(mediaClient.controllerUiStates.folderList, { it.path }, { it }) { item(it) }
     }
 
-    override fun onSliderValueChange(): (Float) -> Unit = { }
-
-    override fun onSliderValueChangeFinished(): () -> Unit = { }
+    override fun onSliderValueChange(): (Float) -> Unit = {
+        mediaClient.timeJob.cancel()
+        mediaClient.controllerUiStates.timeProgress = it
+    }
+    override fun onSliderValueChangeFinished(): () -> Unit = {
+            val duration = mediaClient.mediaController?.metadata?.getLong(
+                MediaMetadata.METADATA_KEY_DURATION
+            )?.toInt() ?: 0
+            mediaClient.mediaController?.transportControls?.seekTo(
+                (duration / (1f / mediaClient.controllerUiStates.timeProgress)).toLong()
+            )
+            mediaClient.startPlay()
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)

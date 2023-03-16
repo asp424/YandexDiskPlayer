@@ -3,4 +3,5 @@
     <string name="pause">1</string>
     <string name="back">2</string>
     <string name="next">3</string>
+    <string name="close">4</string>
 </resources>

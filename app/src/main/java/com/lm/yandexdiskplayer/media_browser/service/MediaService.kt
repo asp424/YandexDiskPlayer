@@ -10,11 +10,9 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.annotation.RequiresApi
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
-import com.lm.core.log
-import com.lm.yandexapi.folders
-import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.songs
+import com.lm.yandexdiskplayer.media_browser.service.Notify.Companion.notificationId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
@@ -37,7 +35,7 @@ class MediaService : MediaBrowserServiceCompat() {
     override fun onCreate() {
         super.onCreate()
         startForegroundService(Intent(this@MediaService, MediaService::class.java))
-        startForeground(1001, notification.notificationBuilder(0).build())
+        startForeground(notificationId, notification.notificationBuilder(0).build())
         mediaSession = MediaSessionCompat(baseContext, "session").apply {
             setSessionToken(sessionToken)
             isActive = true
@@ -65,7 +63,9 @@ class MediaService : MediaBrowserServiceCompat() {
 
     override fun onLoadChildren(
         parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>
-    ) { if (parentId == "root") result.sendResult(songsMediaItems) }
+    ) {
+        if (parentId == "root") result.sendResult(songsMediaItems)
+    }
 
     private val Song.songMediaItem
         inline get() = MediaBrowserCompat.MediaItem(
@@ -74,8 +74,8 @@ class MediaService : MediaBrowserServiceCompat() {
             MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
         )
 
-override fun onDestroy() {
-    mediaSession?.release()
-    super.onDestroy()
-}
+    override fun onDestroy() {
+        mediaSession?.release()
+        super.onDestroy()
+    }
 }
