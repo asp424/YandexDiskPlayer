@@ -1,5 +1,6 @@
 package com.lm.yandexdiskplayer.ui.cells
 
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,8 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lm.yandexdiskplayer.player.ControllerUiStates
-import com.lm.yandexdiskplayer.player.PlayerState
+import com.lm.yandexdiskplayer.ui.states.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -92,7 +92,7 @@ fun PlayingCard(
                     )
 
                     Icon(
-                        if (controllerUiStates.playerState == PlayerState.PLAYING)
+                        if (controllerUiStates.playerState == PlaybackStateCompat.STATE_PLAYING)
                             Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                         null, modifier.playerBarPauseModifier,
                         tint = if (controllerUiStates.enablePlay) Color.Black else Color.LightGray

@@ -21,13 +21,15 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.media_browser.service.Notify.Companion.notificationId
-import com.lm.yandexdiskplayer.player
+import com.lm.yandexdiskplayer.player.Player
 
 context(MediaService)
 @RequiresApi(Build.VERSION_CODES.O)
 class SessionCallback(
     private val notify: (Int) -> Notification
 ) : MediaSessionCompat.Callback() {
+
+    private val player by lazy { Player(this@MediaService) }
 
     private val notificationManager = getSystemService<NotificationManager>()
 
@@ -60,6 +62,7 @@ class SessionCallback(
 
     override fun onSeekTo(pos: Long) {
         player.seekTo(pos); if (getState == STATE_PLAYING) setStateBuilder(STATE_PLAYING, pos)
+        if (getState == STATE_PAUSED) setStateBuilder(STATE_PAUSED, pos)
     }
 
     override fun onStop() {
@@ -67,6 +70,7 @@ class SessionCallback(
     }
 
     override fun onRewind() {
+        player.releasePlayer()
         stopSelf()
         super.onRewind()
     }
@@ -83,8 +87,7 @@ class SessionCallback(
         super.onPlayFromMediaId(mediaId, extras)
     }
 
-    private val setState
-        get() = run { mediaSession?.setPlaybackState(stateBuilder.build()) }
+    private val setState get() = run { mediaSession?.setPlaybackState(stateBuilder.build()) }
 
     private val getState get() = run { controller?.playbackState?.state }
 
@@ -96,21 +99,21 @@ class SessionCallback(
 
     private val MediaMetadataCompat.nextPrev
         get() = run {
-                if (getState == STATE_PLAYING) {
-                    setMetadata
-                    setStateBuilder(STATE_PLAYING, 0)
-                    showNotify { notify(0) }
-                    controller?.transportControls?.play()
-                } else {
-                    setMetadata
+            if (getState == STATE_PLAYING) {
+                setMetadata
+                setStateBuilder(STATE_PLAYING, 0)
+                showNotify { notify(0) }
+                controller?.transportControls?.play()
+            } else {
+                setMetadata
+                setStateBuilder(STATE_PAUSED, 0)
+                showNotify { notify(1) }
+                player.prepareNew {
+                    it.setMetadata
                     setStateBuilder(STATE_PAUSED, 0)
                     showNotify { notify(1) }
-                    player.prepareNew {
-                        it.setMetadata
-                        setStateBuilder(STATE_PAUSED, 0)
-                        showNotify { notify(1) }
-                    }
                 }
+            }
         }
 
     private val controller by lazy { mediaSession?.controller }

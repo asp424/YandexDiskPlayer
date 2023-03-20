@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.lm.yandexdiskplayer.MainActivity
-import com.lm.yandexdiskplayer.player.ControllerUiStates
+import com.lm.yandexdiskplayer.ui.states.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
 @SuppressLint("SuspiciousIndentation")

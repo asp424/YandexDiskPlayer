@@ -3,6 +3,7 @@ package com.lm.yandexdiskplayer.ui.states
 import android.content.Context
 import android.media.MediaMetadata
 import android.os.Build
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -35,12 +36,9 @@ import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.resultHandler
 import com.lm.yandexapi.startAuth
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
-import com.lm.yandexdiskplayer.player.PlayerState
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 @RequiresApi(Build.VERSION_CODES.O)
 private class MainScreenStateImpl(
@@ -54,13 +52,8 @@ private class MainScreenStateImpl(
 
     private var _foldersList: SnapshotStateList<Folder> = mutableStateListOf()
 
-    init {
-        //  if (_isAuth) loadFoldersList()
-        if (!mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
-    }
-
     override fun loadFoldersList() {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(IO).launch {
             _foldersList = context.folders.toMutableStateList()
             if (!mediaClient.controllerUiStates.columnVisible)
                 mediaClient.controllerUiStates.columnVisible = true
@@ -108,7 +101,8 @@ private class MainScreenStateImpl(
                         song.path, null
                     )
                     mediaClient.controllerUiStates.isPlayingCardVisible = true
-                    mediaClient.controllerUiStates.nowPlayingSong = song
+                    mediaClient.controllerUiStates.setSongInPlayingCard(song)
+                    mediaClient.controllerUiStates.timeProgress = 0f
                 }
             }
         )
@@ -141,7 +135,7 @@ private class MainScreenStateImpl(
     override val Modifier.playerBarPauseModifier: Modifier
         @RequiresApi(Build.VERSION_CODES.O)
         get() = clickable(mediaClient.controllerUiStates.enablePlay) {
-            if(mediaClient.controllerUiStates.playerState == PlayerState.PLAYING)
+            if(mediaClient.controllerUiStates.playerState == PlaybackStateCompat.STATE_PLAYING)
             mediaClient.mediaController?.transportControls?.pause()
             else mediaClient.mediaController?.transportControls?.play()
         }.size(80.dp)
@@ -163,7 +157,7 @@ private class MainScreenStateImpl(
     }
 
     override fun onSliderValueChange(): (Float) -> Unit = {
-        mediaClient.timeJob.cancel()
+        mediaClient.controllerUiStates.timeJob.cancel()
         mediaClient.controllerUiStates.timeProgress = it
     }
     override fun onSliderValueChangeFinished(): () -> Unit = {
@@ -173,7 +167,7 @@ private class MainScreenStateImpl(
             mediaClient.mediaController?.transportControls?.seekTo(
                 (duration / (1f / mediaClient.controllerUiStates.timeProgress)).toLong()
             )
-            mediaClient.startPlay()
+            mediaClient.controllerUiStates.startPlay(mediaClient.mediaController)
     }
 }
 
