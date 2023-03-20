@@ -27,6 +27,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lm.core.animDp
 import com.lm.core.utils.getToken
@@ -103,6 +104,8 @@ private class MainScreenStateImpl(
                     mediaClient.controllerUiStates.isPlayingCardVisible = true
                     mediaClient.controllerUiStates.setSongInPlayingCard(song)
                     mediaClient.controllerUiStates.timeProgress = 0f
+                    mediaClient.controllerUiStates.showBottomBar()
+
                 }
             }
         )
@@ -119,26 +122,22 @@ private class MainScreenStateImpl(
     override val Modifier.textSongsModifier: Modifier get() = padding(10.dp)
 
     override val Modifier.boxLogoModifier: Modifier get() = fillMaxSize()
-    override val Modifier.playerBarPrevModifier: Modifier
-        @RequiresApi(Build.VERSION_CODES.O)
-        get() = clickable(mediaClient.controllerUiStates.enablePrev) {
+    override fun Modifier.playerBarPrevModifier(size: Dp): Modifier
+         = clickable(mediaClient.controllerUiStates.enablePrev) {
             mediaClient.mediaController?.transportControls?.skipToPrevious()
         }
-            .padding(start = 80.dp)
-            .size(60.dp)
-    override val Modifier.playerBarNextModifier: Modifier
-        @RequiresApi(Build.VERSION_CODES.O)
-        get() = clickable(mediaClient.controllerUiStates.enableNext) {
+
+            .size(size)
+    override fun Modifier.playerBarNextModifier(size: Dp): Modifier
+        = clickable(mediaClient.controllerUiStates.enableNext) {
             mediaClient.mediaController?.transportControls?.skipToNext()
-        }.padding(end = 80.dp)
-            .size(60.dp)
-    override val Modifier.playerBarPauseModifier: Modifier
-        @RequiresApi(Build.VERSION_CODES.O)
-        get() = clickable(mediaClient.controllerUiStates.enablePlay) {
+        }.size(size)
+    override fun Modifier.playerBarPauseModifier(size: Dp): Modifier
+         = clickable(mediaClient.controllerUiStates.enablePlay) {
             if(mediaClient.controllerUiStates.playerState == PlaybackStateCompat.STATE_PLAYING)
             mediaClient.mediaController?.transportControls?.pause()
             else mediaClient.mediaController?.transportControls?.play()
-        }.size(80.dp)
+        }.size(size)
 
     override var isAuth: Boolean
         get() = _isAuth

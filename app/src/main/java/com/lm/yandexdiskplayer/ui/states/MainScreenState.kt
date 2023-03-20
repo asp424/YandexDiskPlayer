@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 
@@ -19,9 +20,9 @@ interface MainScreenState {
     fun Modifier.cardFolderModifier(folder: Folder): Modifier
     val Modifier.textSongsModifier: Modifier
     val Modifier.boxLogoModifier: Modifier
-    val Modifier.playerBarPrevModifier: Modifier
-    val Modifier.playerBarNextModifier: Modifier
-    val Modifier.playerBarPauseModifier: Modifier
+    fun Modifier.playerBarPrevModifier(size: Dp): Modifier
+    fun Modifier.playerBarNextModifier(size: Dp): Modifier
+    fun Modifier.playerBarPauseModifier(size: Dp): Modifier
     fun Modifier.cardSongModifier(song: Song): Modifier
     val isAuth: Boolean
     val isExpand: Boolean

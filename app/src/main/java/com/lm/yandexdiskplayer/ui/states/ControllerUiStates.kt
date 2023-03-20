@@ -28,6 +28,8 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
 
     private var _isPlayingCardVisible by mutableStateOf(false)
 
+    private var _isBottomBarVisible by mutableStateOf(false)
+
     private var _playerState by mutableStateOf(PlaybackStateCompat.STATE_NONE)
 
     private var _enableNext by mutableStateOf(true)
@@ -76,6 +78,12 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
         get() = _isPlayingCardVisible
         set(value) {
             _isPlayingCardVisible = value
+        }
+
+    var isBottomBarVisible: Boolean
+        get() = _isBottomBarVisible
+        set(value) {
+            _isBottomBarVisible = value
         }
 
     var playerState: Int
@@ -142,6 +150,10 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
         _isPlayingCardVisible = true
     }
 
+    fun showBottomBar() {
+        _isBottomBarVisible = true
+    }
+
     fun setSongInPlayingCard(song: Song) {
         nowPlayingSong = song
     }
@@ -171,7 +183,7 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
         playerState = if (state?.state == STATE_PLAYING) {
                 unMuteStates()
                 startPlay(mediaController)
-                STATE_PLAYING
+            STATE_PLAYING
             } else {
                 timeJob.cancel()
                 STATE_PAUSED
@@ -210,7 +222,7 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
         setTimeProgress(mediaController)
         setMetadata(mediaController?.metadata)
         if (mediaController?.getState == STATE_PLAYING || mediaController?.getState == STATE_PAUSED
-        ) showPlayingCard()
+        ) showBottomBar()
     }
 
     private val MediaControllerCompat.getDuration

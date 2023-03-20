@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
+import com.lm.yandexdiskplayer.ui.cells.BottomBar
 import com.lm.yandexdiskplayer.ui.states.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.cells.Logo
 import com.lm.yandexdiskplayer.ui.cells.MainScreen
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
             val mainScreenState = rememberMainScreenState(mediaClient)
             MainScreen(mainScreenState, controllerUiStates)
             Logo(mainScreenState)
+            BottomBar(controllerUiStates, mainScreenState)
             PlayingCard(mainScreenState, controllerUiStates)
         }
     }

@@ -5,8 +5,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.lm.yandexdiskplayer.ui.songCard
 import com.lm.yandexdiskplayer.ui.states.ControllerUiStates
 import com.lm.yandexdiskplayer.ui.states.MainScreenState
 
@@ -18,6 +18,9 @@ fun SongProgress(
     onValueChange = mainScreenState.onSliderValueChange(),
     onValueChangeFinished = mainScreenState.onSliderValueChangeFinished(),
     modifier = modifier.padding(start = 25.dp, end = 25.dp),
-    colors = SliderDefaults.colors(thumbColor = Color.Black),
+    colors = SliderDefaults.colors(
+        thumbColor = songCard,
+        activeTrackColor = songCard
+    ),
     enabled = playerUiStates.enableSlider,
 )
