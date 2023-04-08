@@ -65,7 +65,7 @@ fun PlayingCard(
                     modifier.padding(top = 10.dp, bottom = 20.dp, start = 20.dp, end = 20.dp),
                     fontSize = 12.sp
                 )
-                SongProgress(mainScreenState, controllerUiStates)
+                SongProgress(mainScreenState, controllerUiStates, 25.dp)
                 Row(
                     Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -94,23 +94,7 @@ fun PlayingCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Outlined.SkipPrevious,
-                        null, modifier.playerBarPrevModifier(60.dp),
-                        tint = if (controllerUiStates.enablePrev) Color.Black else Color.LightGray
-                    )
-
-                    Icon(
-                        if (controllerUiStates.playerState == PlaybackStateCompat.STATE_PLAYING)
-                            Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        null, modifier.playerBarPauseModifier(80.dp),
-                        tint = if (controllerUiStates.enablePlay) Color.Black else Color.LightGray
-                    )
-                    Icon(
-                        Icons.Outlined.SkipNext,
-                        null, modifier.playerBarNextModifier(60.dp),
-                        tint = if (controllerUiStates.enableNext) Color.Black else Color.LightGray
-                    )
+                    Buttons(size = 60.dp, controllerUiStates, mainScreenState)
                 }
             }
         }

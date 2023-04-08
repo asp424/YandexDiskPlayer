@@ -8,6 +8,6 @@ import androidx.compose.runtime.Stable
 data class Song(
     val name: String = "",
     val length: String = "",
-    val path: String = "",
+    var path: String = "",
     val folder: String = ""
 )

@@ -7,6 +7,7 @@ import android.support.v4.media.session.MediaControllerCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import com.lm.core.utils.getToken
 import com.lm.yandexdiskplayer.media_browser.client.MediaClient
 import com.lm.yandexdiskplayer.ui.cells.BottomBar
 import com.lm.yandexdiskplayer.ui.states.ControllerUiStates
@@ -18,9 +19,7 @@ import com.lm.yandexdiskplayer.ui.states.rememberMainScreenState
 @RequiresApi(Build.VERSION_CODES.O)
 class MainActivity : ComponentActivity() {
 
-    private val controllerUiStates: ControllerUiStates by lazy {
-        ControllerUiStates()
-    }
+    private val controllerUiStates by lazy { ControllerUiStates(this) }
 
     private val mediaClient by lazy { MediaClient(this, controllerUiStates) }
 
@@ -37,7 +36,8 @@ class MainActivity : ComponentActivity() {
 
     public override fun onStart() {
         super.onStart()
-       mediaClient.mediaBrowser.connect()
+        controllerUiStates.isAuth = getToken.isNotEmpty()
+      if (controllerUiStates.isAuth && !mediaClient.mediaBrowser.isConnected) mediaClient.mediaBrowser.connect()
     }
 
     public override fun onResume() {

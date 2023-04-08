@@ -19,6 +19,7 @@ import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
 import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
+import com.lm.core.log
 import com.lm.yandexapi.models.Song
 import com.lm.yandexdiskplayer.media_browser.service.Notify.Companion.notificationId
 import com.lm.yandexdiskplayer.player.Player
@@ -79,11 +80,18 @@ class SessionCallback(
         notificationManager?.notify(notificationId, notify.invoke())
 
     override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
-        val song = songsList.find { it.path == mediaId } ?: Song()
-        val playList = songsMap[mediaId?.substringBefore(song.name)] ?: emptyList()
-        player.loadSongs(song, playList.sortedBy { it.name })
-        mediaSession?.controller?.transportControls?.stop()
-        mediaSession?.controller?.transportControls?.play()
+        mediaId?.apply {
+            val song = songsList.find { it.path == mediaId } ?: Song()
+            mediaId.log
+            val playList = songsMap[mediaId.substringBefore(song.name)] ?: emptyList()
+            playList.forEach {
+                if (mediaId.startsWith("/root/"))
+                    it.path = it.path.replace("/root/", "/")
+            }
+            player.loadSongs(song, playList.sortedBy { it.name })
+            mediaSession?.controller?.transportControls?.stop()
+            mediaSession?.controller?.transportControls?.play()
+        }
         super.onPlayFromMediaId(mediaId, extras)
     }
 

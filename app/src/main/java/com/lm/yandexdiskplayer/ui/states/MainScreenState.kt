@@ -24,15 +24,17 @@ interface MainScreenState {
     fun Modifier.playerBarNextModifier(size: Dp): Modifier
     fun Modifier.playerBarPauseModifier(size: Dp): Modifier
     fun Modifier.cardSongModifier(song: Song): Modifier
-    val isAuth: Boolean
     val isExpand: Boolean
     fun LazyListScope.folders(item: @Composable LazyItemScope.(Folder) -> Unit)
-
     fun onSliderValueChange(): (Float) -> Unit
 
     fun onSliderValueChangeFinished(): () -> Unit
 
-    fun loadFoldersList()
+    fun disconnect()
+
+    fun connect()
+
+    fun stop()
 }
 
 

@@ -17,7 +17,8 @@ import androidx.core.content.getSystemService
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-fun <T> Context.toast(any: T) = Toast.makeText(this, any.toString(), Toast.LENGTH_SHORT).show()
+fun <T> Context.toast(any: T)
+= Toast.makeText(this, any.toString(), Toast.LENGTH_SHORT).show()
 
 val <T> T.log get() = Log.d("My", toString())
 
@@ -55,13 +56,6 @@ inline val isAtLeastAndroid12
 inline val isAtLeastAndroid6
     get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
 
-val Context.isIgnoringBatteryOptimizations: Boolean
-    get() = if (isAtLeastAndroid6) {
-        getSystemService<PowerManager>()?.isIgnoringBatteryOptimizations(packageName) ?: true
-    } else {
-        true
-    }
-
 inline fun <reified T : Activity> Context.activityPendingIntent(
     requestCode: Int = 0,
     flags: Int = 0,
@@ -73,13 +67,6 @@ inline fun <reified T : Activity> Context.activityPendingIntent(
     )
 
 inline fun <reified T> Context.intentOf(): Intent = Intent(this, T::class.java)
-
-inline fun <reified T : BroadcastReceiver> Context.broadCastPendingIntent(
-    requestCode: Int = 0,
-    flags: Int = PendingIntent.FLAG_IMMUTABLE,
-): PendingIntent =
-    PendingIntent.getBroadcast(this, requestCode, intentOf<T>(), flags)
-
 
 
 

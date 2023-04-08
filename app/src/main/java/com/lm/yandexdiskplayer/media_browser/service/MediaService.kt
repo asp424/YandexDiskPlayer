@@ -10,6 +10,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.annotation.RequiresApi
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
+import com.lm.core.log
 import com.lm.yandexapi.models.Song
 import com.lm.yandexapi.songs
 import com.lm.yandexdiskplayer.media_browser.service.Notify.Companion.notificationId
@@ -35,8 +36,9 @@ class MediaService : MediaBrowserServiceCompat() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
+        notification.createNotificationChannel(this)
         startForegroundService(Intent(this@MediaService, MediaService::class.java))
-        startForeground(notificationId, notification.notificationBuilder(0).build())
+        startForeground(notificationId, notification.startServiceNotify())
         mediaSession = MediaSessionCompat(baseContext, "session").apply {
             setSessionToken(sessionToken)
             isActive = true

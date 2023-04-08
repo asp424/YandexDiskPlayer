@@ -15,7 +15,8 @@ import java.io.OutputStream
 val Context.songs
     get() = runCatching {
         RestClient(credential).getFlatResourceList(flatResourcesArgs).items.map { s ->
-            Song(s.name, s.size.toString(), s.path.path, s.getFolder)
+            Song(s.name, s.size.toString(), if(s.path.path.substringBefore(s.name) == "/")
+                s.path.path.replace("/", "/root/") else s.path.path, s.getFolder)
         }.sortedBy { song -> song.folder }.filter { it.name.filterByType }
     }.getOrDefault(emptyList())
 val Context.folders
@@ -31,7 +32,8 @@ val Context.folders
 
 private fun Map<String, List<Resource>>.getSongsList(key: String)
 = (get(key) ?: emptyList())
-    .map { s -> Song(s.name, s.size.toString(), s.path.path, s.getFolder) }.sortedBy { song -> song.name }
+    .map { s -> Song(s.name, s.size.toString(), s.path.path, s.getFolder) }
+    .sortedBy { song -> song.name }
 
 private fun List<Resource>.findFolder(folderPath: String) =
     find { r -> r.getFolder == folderPath } ?: Resource()
@@ -51,7 +53,8 @@ val Resource.getFolder
 private val flatResourcesArgs
         by lazy { ResourcesArgs.Builder().setMediaType("audio").setLimit(2000).build() }
 
-private val String.filterByType get() = endsWith(".mp3") || endsWith(".wav")
+private val String.filterByType get() = endsWith(".mp3")
+        || endsWith(".wav") || endsWith(".flac")
 
 
 

@@ -1,5 +1,6 @@
 package com.lm.yandexdiskplayer.ui.states
 
+import android.content.Context
 import android.media.MediaMetadata
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -7,11 +8,15 @@ import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
 import android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.lm.core.getSeconds
+import com.lm.core.log
+import com.lm.core.utils.getToken
 import com.lm.yandexapi.models.Folder
 import com.lm.yandexapi.models.Song
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.random.Random
-
-class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
+class ControllerUiStates(private val context: Context) : MediaBrowserCompat.SubscriptionCallback() {
 
     private var _nowPlayingSong by mutableStateOf(Song())
 
@@ -49,6 +53,22 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
     private var _columnVisible by mutableStateOf(false)
 
     private var _foldersList: SnapshotStateList<Folder> = mutableStateListOf()
+
+    private var _isAuth by mutableStateOf(context.getToken.isNotEmpty())
+
+    private var _isAutoPlay by mutableStateOf("")
+
+    var isAuth: Boolean
+        get() = _isAuth
+        set(value) {
+            _isAuth = value
+        }
+
+    var isAutoPlay: String
+        get() = _isAutoPlay
+        set(value) {
+            _isAutoPlay = value
+        }
 
     var folderList: List<Folder>
         get() = _foldersList
@@ -146,12 +166,16 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
         _isPlayingCardVisible = false
     }
 
-    private fun showPlayingCard() {
+    fun showPlayingCard() {
         _isPlayingCardVisible = true
     }
 
     fun showBottomBar() {
         _isBottomBarVisible = true
+    }
+
+    fun hideBottomBar() {
+        _isBottomBarVisible = false
     }
 
     fun setSongInPlayingCard(song: Song) {
@@ -169,12 +193,15 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
                     "", it.mediaId.toString(), it.description.subtitle.toString()
                 )
             }
-                .groupBy { it.path.substringBefore(it.name) }
+                .groupBy { with(it.path.substringBefore(it.name)) { if (length > 1) this else "/root/" } }
             folderList = map.keys.map {
                 Folder(it, "",
                     Random(67465465).nextInt().toString(), (map[it] ?: emptyList())
                         .sortedBy { song -> song.name })
             }.sortedBy { it.path }
+            folderList.forEach {
+                it.log
+            }
         }
         super.onChildrenLoaded(parentId, children)
     }
@@ -200,13 +227,17 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
     private fun setTimeProgress(mediaController: MediaControllerCompat?) {
         mediaController?.apply {
             ((1f / getDuration) * getPosition).apply { timeProgress = if (!isNaN()) this else 0f }
+            timeTextProgress = duration.getTextProgress.getSeconds
         }
     }
+
+    val Int.getTextProgress get() = (this / (1f / timeProgress)).toInt()
 
     var timeJob: Job = Job().apply { cancel() }
     fun startPlay(mediaController: MediaControllerCompat?) {
         timeJob.cancel()
         mediaController?.apply {
+            durationSong = duration.getSeconds
             timeJob = CoroutineScope(IO).launch {
                 delay(100)
                 while (isActive && getState == STATE_PLAYING) {
@@ -218,18 +249,24 @@ class ControllerUiStates() : MediaBrowserCompat.SubscriptionCallback() {
     }
 
     fun initStates(mediaController: MediaControllerCompat?){
-        startPlayMetadata(mediaController?.playbackState, mediaController)
-        setTimeProgress(mediaController)
-        setMetadata(mediaController?.metadata)
-        if (mediaController?.getState == STATE_PLAYING || mediaController?.getState == STATE_PAUSED
-        ) showBottomBar()
+        mediaController?.apply {
+            startPlayMetadata(playbackState, mediaController)
+            setTimeProgress(mediaController)
+            setMetadata(metadata)
+            if (getState == STATE_PLAYING || getState == STATE_PAUSED) showBottomBar()
+            duration.apply { durationSong = getSeconds }
+        }
     }
 
     private val MediaControllerCompat.getDuration
         get() = (metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L).toFloat()
 
+    val MediaControllerCompat.duration get() = metadata?.getLong(
+        MediaMetadata.METADATA_KEY_DURATION
+    )?.toInt() ?: 0
     private val MediaControllerCompat.getPosition get() = (playbackState?.position?:0L).toFloat()
 
     private val MediaControllerCompat.getState get() = playbackState?.state?:0
+
 }
 

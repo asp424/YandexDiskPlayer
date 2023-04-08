@@ -23,13 +23,16 @@ fun MainScreen(
 ) = with(mainScreenState) {
     Visibility(controllerUiStates.columnVisible) {
         LazyColumn(modifier.columnModifier, contentPadding =
-        PaddingValues(bottom = if (controllerUiStates.isBottomBarVisible) 100.dp else 0.dp)) {
+        PaddingValues(bottom = if (controllerUiStates.isBottomBarVisible) 110.dp else 0.dp)) {
             folders { Folder(mainScreenState, it) }
         }
     }
     val mainActivity = LocalContext.current as MainActivity
     BackHandler {
-        if (controllerUiStates.isPlayingCardVisible) controllerUiStates.hidePlayingCard()
+        if (controllerUiStates.isPlayingCardVisible) {
+            controllerUiStates.hidePlayingCard()
+            controllerUiStates.showBottomBar()
+        }
         else mainActivity.finish()
     }
 }

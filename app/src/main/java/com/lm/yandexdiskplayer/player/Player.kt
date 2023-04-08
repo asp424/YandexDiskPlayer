@@ -102,8 +102,10 @@ class Player(
 
     private fun getUrl(onGet: (String) -> Unit) =
         CoroutineScope(Main).launch {
-            fetch(currentSong!!.path, context.getToken).startRequest().collect {
-                if (it is LoadingResource.Success) onGet(it.data.href)
+            currentSong?.apply {
+                fetch(path, context.getToken).startRequest().collect {
+                    if (it is LoadingResource.Success) onGet(it.data.href)
+                }
             }
         }
 
